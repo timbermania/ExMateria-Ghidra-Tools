@@ -1,6 +1,6 @@
 # FFT Ghidra label table — apply probe-confirmed names to BATTLE.BIN
 
-Every entry in `fft_battle_bin.tsv` comes from a Lua probe whose
+Every entry in `labels_battle_bin.tsv` comes from a Lua probe whose
 **value-level output pairs bit-exactly** between PCSX-Redux and Godot on
 `cure_no_music`. Confirmed PAIR status lives in
 `research/effect_alignment/last_run/probe_pairs.json`. That means we can
@@ -10,7 +10,7 @@ reproduces them exactly.
 
 ## What this contains
 
-`fft_battle_bin.tsv` — tab-separated, six columns:
+`labels_battle_bin.tsv` — tab-separated, six columns:
 
 | column | meaning |
 |---|---|
@@ -28,23 +28,27 @@ plus the supporting infrastructure (`async_commit_walker_irq`,
 
 ## Applying labels in Ghidra
 
+The wrapper `fft-ghidra/tools/apply_all_renames.sh` runs labels
+automatically as the final tier after LOW and HIGH renames. Use the
+direct forms below only for one-off / GUI work.
+
 ### GUI (one-off)
 
 1. Open BATTLE.BIN in Ghidra.
 2. Window → Script Manager.
-3. Add `fft-ghidra/tools/` to your script paths if not already there.
+3. Add `fft-ghidra/renames/` to your script paths if not already there.
 4. Run `fft_apply_labels.py`. When prompted, point it at
-   `fft-ghidra/labels/fft_battle_bin.tsv`.
+   `fft-ghidra/renames/labels_battle_bin.tsv`.
 5. Save the program.
 
-### Headless (CI / batch)
+### Headless (direct)
 
 ```bash
 analyzeHeadless <ghidra-project-dir> <project-name> \
     -process "BATTLE.BIN" \
-    -scriptPath fft-ghidra/tools \
+    -scriptPath fft-ghidra/renames \
     -postScript fft_apply_labels.py \
-      "<absolute-path-to>/fft-ghidra/labels/fft_battle_bin.tsv"
+      "<absolute-path-to>/fft-ghidra/renames/labels_battle_bin.tsv"
 ```
 
 Drop `-readOnly` if you want the renames persisted (default in this
@@ -54,10 +58,20 @@ appropriate `analyzeHeadless` flags).
 The script is **idempotent** — re-running with no TSV changes produces
 zero edits. Adding a new entry and re-running picks up only that entry.
 
+## Priority vs. LOW/HIGH renames
+
+Labels are the highest tier — they run after `apply_renames_low.py` and
+`apply_renames_high.py` in the wrapper, so on the ~40 addresses where a
+label entry overlaps a rename entry, the label wins. The rename
+applicators don't emit `OVERRIDE:` lines for label-tier wins (the label
+applicator runs as a separate analyzeHeadless invocation and doesn't see
+the prior rename state); inspect the wrapper's run.log to see what
+happened at each tier.
+
 ## Adding new entries
 
 After a new probe pairs PAIR (or PAIR_DRIFT with explanation), append a
-row to `fft_battle_bin.tsv`:
+row to `labels_battle_bin.tsv`:
 
 1. The probe's BP_ADDR is the `pc`.
 2. If `pc` is a function entry (check

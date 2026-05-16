@@ -12,7 +12,8 @@ Symbol renames for the `fft-ghidra` Ghidra project, split by confidence tier.
 | `apply_renames_low.py` | Jython post-script — loads every `renames_low*.tsv` in this dir. |
 | `apply_renames_high.py` | Jython post-script — loads every `renames_high*.tsv` in this dir. Logs `OVERRIDE:` when it overrides a LOW name. |
 | `_renames_common.py` | Shared parser / symbol resolution / DEL handling. |
-| `../tools/apply_all_renames.sh` | Wrapper: runs LOW then HIGH across all 14 imported programs. |
+| `fft_apply_labels.py` + `labels_battle_bin.tsv` | The **confirmed-tier** labels — runs after LOW/HIGH, wins on overlap. Different schema (carries plate/pre-comments). See `LABELS.md`. |
+| `../tools/apply_all_renames.sh` | Wrapper: runs LOW → HIGH → labels across the requested programs. |
 
 The apply scripts glob `renames_<tier>*.tsv` in this directory, so you can split a tier into multiple domain-specific files without editing any code. Files within a tier load alphabetically; the primary `renames_<tier>.tsv` is loaded first.
 

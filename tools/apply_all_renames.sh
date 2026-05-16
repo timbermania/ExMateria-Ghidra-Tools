@@ -47,12 +47,32 @@ for prog in "${PROGRAMS[@]}"; do
   done
 done
 
+# Labels tier: probe-confirmed annotations. Wins on overlap with LOW/HIGH
+# because it runs last. Currently BATTLE.BIN-only; skipped silently when
+# the run doesn't include BATTLE.BIN or the labels TSV is missing.
+LABELS_TSV="$SCRIPT_DIR/labels_battle_bin.tsv"
+for prog in "${PROGRAMS[@]}"; do
+  if [[ "$prog" == "BATTLE.BIN" && -f "$LABELS_TSV" ]]; then
+    echo "=== BATTLE.BIN / labels ===" | tee -a "$LOG"
+    "$ANALYZE" "$GHIDRA_PROJ_DIR" "$GHIDRA_PROJ_NAME" \
+      -process "BATTLE.BIN" \
+      -noanalysis \
+      -scriptPath "$SCRIPT_DIR" \
+      -postScript "fft_apply_labels.py" "$LABELS_TSV" \
+      2>&1 | tee -a "$LOG" \
+      | grep -E "^0x[0-9a-fA-F]+[[:space:]]+(function|label)|Summary:|ERROR|WARN" || true
+    break
+  fi
+done
+
 echo
 echo "=== summary ==="
-grep -cE "\[LOW\] FN "  "$LOG" | awk '{print "LOW FN applied:  " $0}'
-grep -cE "\[LOW\] GL "  "$LOG" | awk '{print "LOW GL applied:  " $0}'
-grep -cE "\[HIGH\] FN " "$LOG" | awk '{print "HIGH FN applied: " $0}'
-grep -cE "\[HIGH\] GL " "$LOG" | awk '{print "HIGH GL applied: " $0}'
-grep -cE "OVERRIDE:"     "$LOG" | awk '{print "OVERRIDEs:       " $0}'
-grep -cE "SKIP_"         "$LOG" | awk '{print "SKIPs:           " $0}'
+grep -cE "\[LOW\] FN "                              "$LOG" | awk '{print "LOW FN applied:    " $0}'
+grep -cE "\[LOW\] GL "                              "$LOG" | awk '{print "LOW GL applied:    " $0}'
+grep -cE "\[HIGH\] FN "                             "$LOG" | awk '{print "HIGH FN applied:   " $0}'
+grep -cE "\[HIGH\] GL "                             "$LOG" | awk '{print "HIGH GL applied:   " $0}'
+grep -cE "^0x[0-9a-fA-F]+[[:space:]]+function "     "$LOG" | awk '{print "LABEL fn rows:     " $0}'
+grep -cE "^0x[0-9a-fA-F]+[[:space:]]+label "        "$LOG" | awk '{print "LABEL pc rows:     " $0}'
+grep -cE "OVERRIDE:"                                "$LOG" | awk '{print "OVERRIDEs:         " $0}'
+grep -cE "SKIP_"                                    "$LOG" | awk '{print "SKIPs:             " $0}'
 echo "Full log: $LOG"

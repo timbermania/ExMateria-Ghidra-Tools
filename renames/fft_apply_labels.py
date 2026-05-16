@@ -3,24 +3,28 @@
 # Ghidra Jython postScript: apply probe-confirmed function names and
 # annotations to BATTLE.BIN.
 #
-# Source of truth: research/ghidra_labels/fft_battle_bin.tsv. Every entry
+# Source of truth: fft-ghidra/renames/labels_battle_bin.tsv. Every entry
 # corresponds to a probe whose value-level output pairs bit-exactly between
 # PCSX-Redux and Godot (per research/effect_alignment/last_run/probe_pairs.json),
 # so the FFT-side semantics described in each plate comment are confirmed.
 #
+# This is the "confirmed" tier on top of LOW/HIGH renames — runs last so it
+# wins on any address overlap with the rename TSVs.
+#
 # Idempotent: running twice is a no-op (skips functions already at the target
 # name, skips comments already matching).
 #
-# Usage (headless):
+# Usage (headless): normally invoked via fft-ghidra/tools/apply_all_renames.sh
+# as the final tier. Direct invocation:
 #   analyzeHeadless <projectDir> <projectName> \
 #       -process "BATTLE.BIN" \
-#       -scriptPath research/scripts/ghidra \
+#       -scriptPath fft-ghidra/renames \
 #       -postScript fft_apply_labels.py \
-#         "C:/path/to/research/ghidra_labels/fft_battle_bin.tsv" \
+#         "<absolute-path>/fft-ghidra/renames/labels_battle_bin.tsv" \
 #       -readOnly
 #
 # Usage (GUI): Window → Script Manager → run fft_apply_labels.py and pass
-# the absolute path to fft_battle_bin.tsv when prompted (via askFile).
+# the absolute path to labels_battle_bin.tsv when prompted (via askFile).
 #
 # @category FFT
 # @runtime Jython
@@ -40,7 +44,7 @@ args = getScriptArgs()
 if len(args) >= 1:
     tsv_path = args[0]
 else:
-    f = askFile("Select fft_battle_bin.tsv", "Apply")
+    f = askFile("Select labels_battle_bin.tsv", "Apply")
     tsv_path = f.getAbsolutePath()
 
 if not os.path.exists(tsv_path):

@@ -9,8 +9,7 @@ disassembly/decompilation that other tooling can grep over.
 
 ```
 tools/        Jython postscripts + shell wrappers (analyzeHeadless drivers)
-renames/      Two-tier symbol-rename TSVs + applier scripts
-labels/       Probe-confirmed label table for BATTLE.BIN (TSV, source of truth)
+renames/      Three-tier symbol/label TSVs + applier scripts (LOW, HIGH, labels)
 docs/         Setup guide and quick-start
 ```
 
@@ -23,7 +22,6 @@ docs/         Setup guide and quick-start
 | `apply_all_renames.sh` | Apply low/high two-tier renames across every imported program |
 | `export_ghidra_text.sh` | Re-export `{scus,battle}_{disassembly.txt,decompilation.c}` |
 | `fix_battle_bin_disassembly.sh` | Apply BATTLE.BIN overlay + force-disassemble fixes |
-| `fft_apply_labels.py` | Apply `labels/fft_battle_bin.tsv` to a Ghidra program (idempotent) |
 | `fft_verify_load.py` | Sanity-check that a Ghidra program loaded at the expected addresses |
 | `ghidra_export_listing.py` | Plain-text listing exporter (Jython) |
 | `ghidra_effect_decompile.py` | Per-function decompiler for an effect's code range |
@@ -38,21 +36,22 @@ docs/         Setup guide and quick-start
 
 ### `renames/`
 
-Two-tier symbol-rename pipeline for the Ghidra project. `renames_low.tsv`
-holds hypothesised names; `renames_high.tsv` holds validated ones and
-overrides on conflict. Domain-specific add-ons (e.g.
-`renames_high_sound.tsv`) are auto-loaded alongside the base files. Covers
-both the sound system and the particle/VFX effect system. See
-`renames/README.md` for the schema, conflict semantics, and how to
-promote LOW→HIGH.
+Three-tier symbol pipeline applied in order — later tiers override
+earlier ones on the same address:
 
-### `labels/`
+1. **LOW** (`renames_low*.tsv`) — hypothesised names from static analysis.
+2. **HIGH** (`renames_high*.tsv`) — validated names with behavioural
+   evidence. Covers both the sound system and the particle/VFX effect
+   system. Domain add-ons (e.g. `renames_high_sound.tsv`) are
+   auto-loaded alongside the base files.
+3. **Labels** (`labels_battle_bin.tsv`) — probe-confirmed names with
+   bit-exact parity between PCSX-Redux and the Godot port. Currently
+   BATTLE.BIN-only. Includes plate comments and per-PC annotations
+   beyond what the rename schema carries.
 
-`fft_battle_bin.tsv` is the canonical label table for `BATTLE.BIN`.
-Every entry has a `pair_status` column showing the bit-exact-parity
-state between the original PCSX-Redux trace and the Godot port that
-consumes the labelled output. See `labels/README.md` for the schema
-and how to add new entries.
+`apply_all_renames.sh` runs all three tiers in sequence. See
+`renames/README.md` for the rename schema and `renames/LABELS.md` for
+the label schema and priority semantics.
 
 ### `docs/`
 
@@ -70,18 +69,14 @@ and how to add new entries.
 ## Typical workflow
 
 ```sh
-# 1. First-time project bootstrap (imports binaries, applies renames).
-GHIDRA_HOME=/opt/ghidra ./tools/bootstrap_ghidra_project.sh
+# 1. Full pipeline — import + structural fixes + LOW/HIGH/labels.
+GHIDRA_HOME=/opt/ghidra ./tools/rebuild_ghidra_from_iso.sh
 
-# 2. Apply the labelled function/landmark set to BATTLE.BIN.
-$GHIDRA_HOME/support/analyzeHeadless <project-dir> <project-name> \
-    -process BATTLE.BIN \
-    -scriptPath tools \
-    -postScript fft_apply_labels.py \
-      "<absolute>/labels/fft_battle_bin.tsv"
-
-# 3. Re-export the text disassembly/decompilation that downstream tools grep.
-./tools/export_ghidra_text.sh
+# Or step by step:
+./tools/bootstrap_ghidra_project.sh        # import + LOW + HIGH
+./tools/fix_battle_bin_disassembly.sh      # BATTLE.BIN overlay + force-disasm
+./tools/apply_all_renames.sh               # LOW + HIGH + labels (covers the overlay)
+./tools/export_ghidra_text.sh              # regenerate text exports
 ```
 
 ## Provenance

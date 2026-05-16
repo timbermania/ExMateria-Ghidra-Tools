@@ -79,5 +79,4 @@ fi
 echo
 echo "✓ Ghidra project ready at $PROJ_DIR/$PROJ_NAME"
 echo "  - Open with Ghidra GUI: File → Open Project → $PROJ_DIR/$PROJ_NAME.gpr"
-echo "  - Apply labels:         see fft-ghidra/README.md (fft_apply_labels.py)"
 echo "  - Refresh exports:      fft-ghidra/tools/export_ghidra_text.sh"
