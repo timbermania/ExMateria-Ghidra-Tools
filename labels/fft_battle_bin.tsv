@@ -1,0 +1,92 @@
+pc	kind	name	pair_status	plate_comment	pre_comment
+# Format: tab-separated, # = comment, blank lines OK.
+# Columns:
+#   pc            — hex address (0x...)
+#   kind          — "function" (rename + plate-comment) | "label" (pre-comment only) | "subroutine_call"
+#   name          — new function/label name (Ghidra-safe identifier)
+#   pair_status   — PAIR (bit-exact value match) | PAIR_DRIFT (values match, cadence drifts ≤2) | FAIL_COUNT (values match, count differs) | FAIL_VALUES
+#   plate_comment — multi-line description; "\n" → newline. Function plates only.
+#   pre_comment   — single-line annotation at the exact pc. "" if blank.
+# All entries derived from probe BP comments and AUDIO_PARITY_FINAL_STATE.md.
+# Bit-exact confirmation comes from research/effect_alignment/last_run/probe_pairs.json.
+
+# === Layer 5: SPU register writers (the boundary FFT writes through to hit the SPU) ===
+0x8001ACF0	function	spu_kon_koff_dispatcher	FAIL_COUNT	SPU KON/KOFF mask dispatcher.\nInvoked by silent-driver and per-channel commit paths to stage KON/KOFF bits.\nWrites do NOT go directly to SPU registers — they update RAM globals DAT_80037080-86 which are flushed to SPU SPU_KON_LO/HI / SPU_KOFF_LO/HI at IRQ time.\nArgs: a0 = voice-bit mask, a1 = mode (1 = KON, 0 = KOFF).\nProbe: probe_kon_koff_mask. PCSX emits one bundled mask per dispatch; Godot's _commit_kon splits into per-voice calls, hence count divergence (FAIL on count, PAIR on values per-voice).	BP @ probe_kon_koff_mask: captures (mask, mode).
+0x8001B428	function	spu_write_voice_vol	PAIR	SPU voice volume L/R writer (no-sweep mode).\nWrites SPU+0x00 (vol_L) and SPU+0x02 (vol_R) for the addressed voice.\nArgs: a0 = voice index (0..23), a1 = vol_L (i16), a2 = vol_R (i16).\nProbe: probe_vol_register. PAIR 122/122 confirmed bit-exact.	BP @ probe_vol_register entry.
+0x8001B4B0	function	spu_write_voice_vol_sweep	PAIR	SPU voice volume L/R writer (sweep mode).\nSets the high-bit-on (sweep-mode) variant of vol_L/vol_R. Sweep mode bits encode rate/direction; see VolumeFlags in vendor/pcsx-redux/src/spu/interface.h.\nArgs: a0 = voice, a1 = vol_L u16, a2 = vol_R u16, a3 = mode bits.\nProbe: probe_vol_register_sweep. PAIR 4/4 confirmed bit-exact.	BP @ probe_vol_register_sweep entry.
+0x8001B628	function	spu_write_voice_pitch	PAIR	SPU voice pitch register writer.\nThe simplest SPU register write — one u16, no sweep, no RMW.\nBody:\n  addiu sp,sp,-0x8\n  lui v0,0x8003; lw v0,-0x52bc(v0)  ; v0 = SPU IO base 0x1F801C00\n  sll a0,a0,0x4 ; a0 = voice * 0x10\n  addu a0,a0,v0\n  sh a1,0x4(a0)                     ; SPU+0x4 = pitch\nArgs: a0 = voice (0..23), a1 = pitch u16.\nProbe: probe_pitch_register. PAIR 222/222 confirmed bit-exact (1-cadence drift on 220/222 rows, value-exact).	BP @ probe_pitch_register entry.
+0x8001B6A4	function	spu_write_voice_sample_start_addr	PAIR	SPU voice sample start_addr writer.\nWrites SPU+0x06 with the ADPCM start address (in 8-byte units stored as byte offset). Used at instrument load / KON to seed pCurr.\nArgs: a0 = voice, a1 = start_addr.\nProbe: probe_sample_start_addr_register. PAIR 4/4 bit-exact.	BP @ probe_sample_start_addr_register entry.
+0x8001B720	function	spu_write_voice_sample_repeat_addr	PAIR	SPU voice sample repeat_addr (loop) writer.\nWrites SPU+0x0E. The repeat address may point into a DIFFERENT instrument's ADPCM region (FFT loops sustained tones into shared cross-instrument data).\nArgs: a0 = voice, a1 = repeat_addr.\nProbe: probe_sample_repeat_addr_register. PAIR 4/4 bit-exact.	BP @ probe_sample_repeat_addr_register entry.
+0x8001B79C	function	spu_write_voice_adsr1_mid	PAIR	SPU voice ADSR1 mid-nibble RMW writer.\nRead-modify-write of SPU+0x08 bits 4-7 (decay rate nibble) + 0-3 (sustain level nibble). Mirrors PCSX-Redux SPU ADSR set via writeRegister.\nArgs: a0 = voice, a1 = decay_rate_nibble, a2 = sustain_level_nibble.\nProbe: probe_adsr1_mid_register. PAIR 4/4 bit-exact.	BP @ probe_adsr1_mid_register entry.
+0x8001B8B0	function	spu_write_voice_adsr1_low	PAIR	SPU voice ADSR1 low-nibble RMW writer.\nWrites only the sustain level nibble (SPU+0x08 bits 0-3).\nArgs: a0 = voice, a1 = sustain_level u8 (0..15).\nProbe: probe_adsr1_low_register. PAIR 4/4 bit-exact.	BP @ probe_adsr1_low_register entry.
+0x8001B938	function	spu_write_voice_adsr1_high	PAIR	SPU voice ADSR1 high writer.\nWrites SPU+0x08 bits 8-15: attack rate (bits 8-14) + attack mode (bit 15 0=linear/1=exponential).\nArgs: a0 = voice, a1 = attack_rate, a2 = attack_mode_exp.\nProbe: probe_adsr1_high_register. PAIR 4/4 bit-exact.	BP @ probe_adsr1_high_register entry.
+0x8001B9D4	function	spu_write_voice_adsr2	PAIR	SPU voice ADSR2 high-bits writer.\nWrites SPU+0x0A bits 6-15: sustain rate (bits 8-14) + sustain mode (bit 15) + sustain direction (bit 14) + sustain step (bits 6-7).\nProbe BP: probe_adsr2_register @ 0x8001BA54 (the actual sh inside this function).\nProbe: probe_adsr2_register. PAIR 11/11 bit-exact.
+0x8001BAB8	function	spu_write_voice_adsr2_low	PAIR_DRIFT	SPU voice ADSR2 low-bits writer.\nWrites SPU+0x0A bits 0-5: release rate (bits 0-4) + release mode (bit 5).\nProbe BP: probe_adsr2_low_register @ 0x8001BAF8 (the actual sh inside this function).\nProbe: probe_adsr2_low_register. Values bit-exact; row count differs by 2 (init-seed asymmetry between PCSX and Godot).
+
+# === Layer 5: probe sites inside the SPU writer fns ===
+0x8001BA54	label	adsr2_sh_site	PAIR	(blank — labels don't get plates)	sh a1,0xa(a0)  ; SPU+0xA = ADSR2 high bits — probe_adsr2_register fires here.
+0x8001BAF8	label	adsr2_low_sh_site	PAIR_DRIFT	-	sh a1,0xa(a0)  ; SPU+0xA = ADSR2 low bits — probe_adsr2_low_register fires here. Count drift = init-seed asymmetry only.
+
+# === Layer 4: walker & cadence plumbing ===
+0x800149DC	function	rcnt2_cadence_source	PAIR	Cadence source (RCNT2 240 Hz IRQ entry / per-pulse handler).\nDrives the entire effect-sound timeline: each pulse advances dispatchers and walkers FLUSH_PER_DISPATCH=8 sub-ticks.\nProbe: probe_cadence_source. PAIR 1680/1680 bit-exact.	BP @ probe_cadence_source entry.
+0x80017118	function	fft_walker_per_channel	PAIR	Per-channel walker entry.\nIterates each channel's slot+0x64 voice mask and dispatches WALKER_FLAG_* fan-outs to SPU register writers (pitch/vol/adsr1/adsr2/sample addrs).\nProbe: probe_fun80017118_entry. PAIR 207/207 rows post-drift (≤3 cadence drift).	BP @ probe_fun80017118_entry.
+0x80017194	label	walker_iter_body	PAIR	-	Inner per-iter step inside fft_walker_per_channel. BP @ probe_fun80017118_iter (1656 hits).
+0x800173B8	label	walker_chan_clear	FAIL_VALUES	-	Per-channel state clear inside fft_walker_per_channel. BP @ probe_fun80017118_clear. 1-row value diff observed — minor walker-tail divergence, low audio impact.
+0x80014660	label	walker_flag_word_entry	PAIR_DRIFT	-	walker_flag_word read site at the top of the per-channel walker pass. BP @ probe_walker_flag_word_entry — 318/320 rows drift ≤±1 cad.
+0x80014BBC	label	per_entity_iter_site	PAIR	-	Per-entity iteration site (audible pair walking). probe_per_entity_iter PAIR 5037 vs 5040 (≤±3 entity-budget drift). Also probe_entity_dump BP.
+0x80014BCC	label	per_entity_pass_site	PAIR	-	Per-entity pass site — probe_per_entity_pass PAIR 519/519.
+0x80014CCC	label	spu_slot_loop_site	PAIR	-	SPU slot loop inside per-entity pass. probe_spu_slot_loop PAIR 207/207.
+0x80015198	label	per_channel_tick_entry_site	PAIR	-	Per-channel tick handler entry. probe_per_channel_tick_entry PAIR 1656/1656. NB: this PC also CLEARS chan+0x88 (pitch_bend) on each tick — see PC 0x800151BC for the clear instruction.
+0x80015300	label	per_channel_tick_exit_site	PAIR	-	Per-channel tick handler exit / unpaired probe diagnostic.
+0x800151E4	label	portamento_a2_wrap_site	PAIR	-	Portamento target_counter (a2) wrap probe site. probe_porta_a2_wrap.
+0x800151FC	label	expression_ramp_site	PAIR	-	Expression / volume ramp staging site. probe_expression_ramp PAIR 70/70.
+0x8001526C	label	portamento_a4_wrap_site	PAIR	-	Portamento accumulator (a4) wrap probe site. probe_porta_a4_wrap.
+
+# === Layer 3: event/note dispatchers ===
+0x800153A4	label	event_dispatch_site	PAIR	-	Per-event dispatch site (opcode jumptable arrival). probe_event_dispatch PAIR 165/165.
+0x80015428	label	note_handler_site	PAIR	-	Note opcode handler body. probe_note_handler PAIR 78/78.
+0x80015494	label	note_post_state_site	PAIR	-	Post-Note staged state snapshot. probe_note_post_state PAIR 78/78.
+0x80015524	label	slur_propagation_pre_site	FAIL_COUNT	-	Pre-state for slur propagation (pcsx=81 godot=79 — 2-row count delta, value-paired). probe_slur_propagation_pre.
+0x80015530	label	slur_propagation_site	PAIR	-	Slur-flag propagation effect. probe_slur_propagation PAIR 78/78.
+0x800157F0	label	vol_prestage_lfo_site	PAIR	-	Per-tick CHAN1_VOL_PRESTAGE set gate (LFO mode 1 active = chan+0xfe==3). probe_vol_prestage_lfo PAIR 1/1.
+
+# === SMD opcode handlers (jumptable @ 0x80028C70) ===
+0x80015874	function	smd_op_rest	PAIR	0x?? Rest opcode.\nProbe: probe_opcode_rest PAIR 1/1.
+0x800158F8	function	smd_op_end_bar	PAIR	0x?? EndBar / barline opcode.\nProbe: probe_opcode_endbar PAIR 2/2.
+0x800159F0	function	smd_op_octave	PAIR	0x?? Octave shift opcode.\nProbe: probe_opcode_octave PAIR 4/4.
+0x80015A28	function	smd_op_lower_octave	PAIR	0x?? Lower-octave opcode.\nProbe: probe_opcode_lower_octave PAIR 7/7.
+0x80015AB8	function	smd_op_repeat	PAIR	0x?? Repeat opcode.\nProbe: probe_opcode_repeat PAIR 3/3.
+0x80015B00	function	smd_op_coda	PAIR	0x?? Coda opcode.\nProbe: probe_opcode_coda PAIR 21/21.
+0x80015E30	function	smd_op_instrument_set	PAIR	0x?? Instrument-select opcode.\nSets channel.instrument_idx → chan+0x8?; populates the audible voice's fine_tune + ADSR registers for the next KON.\nProbe: probe_opcode_instrument PAIR 4/4.
+0x80015EA8	function	smd_op_slur_on	PAIR	0x?? Slur-on opcode (sets channel.flag_word bit 0x800).\nCurrent Ghidra name "smd_flag_0x800" reflected the bit being set; semantic is "slur on".\nProbe: probe_opcode_slur_on PAIR 3/3.
+0x800160E4	function	smd_op_reverb_on	PAIR	0x?? Reverb-on opcode. Sets chan+0x70 routing bit (FFT manages reverb in RAM, NOT via SPU reverb-enable registers).\nProbe: probe_opcode_reverb_on PAIR 2/2.
+0x800161E0	function	smd_op_ca_adsr2_sustain	PAIR	0xCA SustainLevel opcode.\nCurrent Ghidra name "smd_release" was misleading — semantic is "set sustain level via ADSR2 path".\nProbe: probe_opcode_adsr2_sustain PAIR 9/9.
+0x800162B4	function	smd_op_d0_pitch_bend_init	PAIR	0xD0 PitchBend initial.\nSets channel.pitch_bend to the param.\nProbe: probe_opcode_d0_pitch_bend PAIR 1/1.
+0x800162D8	function	smd_op_d1_pitch_bend_relative	PAIR	0xD1 PitchBend relative.\nAccumulates: channel.pitch_bend += param.\nProbe: probe_opcode_d1_pitch_bend PAIR 21/21.
+0x80016364	label	smd_op_d4_portamento_init_body	PAIR	-	Body of 0xD4 PortamentoInit. pre_pitch_delta_u32 = (s8 rate << 24) / target. probe_opcode_d4_portamento PAIR 1/1. (Function entry is just before this PC; rename containing function to smd_op_d4_portamento_init.)
+0x80016420	function	smd_op_d8_pitch_lfo_init	PAIR	0xD8 PitchLFO_Init (FUN_80016420 / jumptable 0x80028C6C).\nSets channel.lfo_step_base = rate^2 << 14 (UNDIVIDED per cure savestate observation); channel.lfo_period_reload = param[0]; chan+0xFE = 3 (mode 1). Mode 1 = alternating swap callback @ LAB_80017690.\nNot directly probed but referenced by probe_lfo_swap / probe_vol_prestage_lfo.
+0x800164D4	function	smd_op_d9_lfo	PAIR	0xD9 LFO (FUN_800164D4 / jumptable 0x80028C70).\nDifferences from 0xD8:\n  - rate sign IS preserved: lo = -rate² for rate<0 (vs 0xD8 always +rate²)\n  - param[2] is bit-decoded: bit 0x10 = mode flag (chan+0xFE = 1 vs 3); low 0x0F = waveform_index → PTR_LAB_80028F54[wf_idx] for chan+0xE0\n  - chan+0xF6 = 0, chan+0xFD = waveform_index\n  - FUN_80016BF8 called with a2 = waveform_index\nProbe: probe_opcode_d9_lfo PAIR 1/1.
+0x800165FC	label	smd_op_db_flag_clear_body	PAIR	-	Body of 0xDB FlagClear. Clears bit 0x1 of chan+0xFE (disables LFO mode 1 sub-slot). probe_opcode_db_flag_clear PAIR 1/1.
+0x80016614	function	smd_op_e0_dynamics	PAIR	0xE0 Dynamics opcode.\nWrites dynamics_byte = read8(a0) to channel state; overrides LFO mode 1 → mode 2 (LAB_800176E4, which bypasses probe_lfo_swap).\nProbe: probe_opcode_dynamics PAIR 4/4.
+0x80016680	function	smd_op_e2_vol_scale	PAIR	0xE2 Expression / Volume-Scale opcode.\nCurrent Ghidra name "smd_expression" is acceptable; the probe calls it vol_scale because it scales the audible-voice volume staging.\nProbe: probe_opcode_e2_vol_scale PAIR 2/2.
+
+# === Pitch LFO callbacks (chan+0x100 fn ptr targets) ===
+0x800175E0	label	lfo_chan_word_1_set_site	-	-	LFO sub-handler that conditionally sets chan_word_1. probe_lfo_chan_word_1_set.
+0x800176CC	label	lfo_swap_commit_site	PAIR	-	`sw a1, 0x4(a0)` — direction-swap commit inside LAB_80017690 (mode 1 LFO callback). probe_lfo_swap PAIR 36/36. mode-2 (LAB_800176E4) bypasses this PC.
+
+# === Walker IRQ + staging probe sites (one PC, two views) ===
+0x80017328	label	vol_staging_io_site	PAIR	-	Walker site where vol_L/vol_R inputs are read and the staging output is committed. probe_vol_inputs + probe_vol_lr_staging both fire here.
+0x80017368	label	pitch_staging_io_site	PAIR	-	Walker site where pre_pitch / pitch_bend / fine_tune are read and pitch_staging is committed. probe_pitch_inputs + probe_pitch_staging both fire here.
+
+# === Misc ===
+0x800125C0	label	play_sound_call_site	PAIR	-	play_sound entry call (effect-sound playback request). probe_play_sound_call PAIR 1/1.
+
+# === Supporting functions referenced from probes / doc but not directly probed ===
+0x80014590	function	async_commit_walker_irq	-	Async-commit walker IRQ handler (called on every SPU IRQ pulse).\nDrains slot+0x64 voice masks per channel and dispatches WALKER_FLAG_* fan-outs into the SPU register writers (spu_write_voice_*).\nDoc reference: AUDIO_PARITY_FINAL_STATE.md §3 ("Final hardware register writes happen at IRQ-flush from RAM globals DAT_80037080-86 — NOT directly via FUN_8001ACF0").\nNot directly probed; verified by downstream probes pairing.
+0x8001920C	function	spu_io_write_helper	-	SPU IO 16-bit write helper. Wraps `sh a1, offset(a0)` with the SPU base offset (0x1F801C00).\nCallers: spu_write_voice_sample_start_addr, spu_write_voice_sample_repeat_addr, and one early-return path at 0x8001AFE4.\nDoc reference: AUDIO_PARITY_FINAL_STATE.md §3.
+
+# === Pitch-LFO mode callbacks (slot+0x100 fn-ptr targets, called from walker) ===
+# These are not in the manifest as function entries (Ghidra has them as LAB_)
+# but they ARE callable functions. The applicator script creates them.
+0x80017690	function	pitch_lfo_callback_mode1_swap	PAIR	Pitch-LFO mode-1 callback: alternating swap.\nInstalled by smd_op_d8_pitch_lfo_init and (with chan+0xFE=3) smd_op_d9_lfo. Per IRQ pulse: decrement chan+0xF4 countdown; on 0 → swap step sign and store to chan+0x88 (pitch_bend).\nInner sw a1,0x4(a0) at 0x800176CC is the probe site (probe_lfo_swap, PAIR 36/36).
+0x800176E4	function	pitch_lfo_callback_mode2	-	Pitch-LFO mode-2 callback.\nInstalled by smd_op_e0_dynamics override (chan+0xFE = 1 from mode-2 D9 path also). Bypasses the swap at 0x800176CC — probe_lfo_swap does NOT fire while this callback is active.
