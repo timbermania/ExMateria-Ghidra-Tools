@@ -6,7 +6,7 @@
 #   ./apply_all_renames.sh                # all 14 default programs
 #   ./apply_all_renames.sh BATTLE.BIN     # specific subset
 #
-# Logs to research/renames/run.log.
+# Logs to fft-ghidra/renames/run.log.
 
 set -euo pipefail
 
@@ -15,7 +15,7 @@ REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
 }
 GHIDRA_PROJ_DIR="$REPO_ROOT/project-assets"
 GHIDRA_PROJ_NAME="fft-ghidra"
-SCRIPT_DIR="$REPO_ROOT/research/renames"
+SCRIPT_DIR="$REPO_ROOT/fft-ghidra/renames"
 ANALYZE="${GHIDRA_HOME:-/opt/ghidra}/support/analyzeHeadless"
 
 DEFAULT_PROGRAMS=(

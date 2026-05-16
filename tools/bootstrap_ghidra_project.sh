@@ -67,7 +67,7 @@ echo "    BATTLE: $BATTLE"
   -loader-blockName battle \
   -processor "MIPS:LE:32:default"
 
-# 3. Apply renames from research/renames/*.tsv. Best-effort: project is
+# 3. Apply renames from fft-ghidra/renames/*.tsv. Best-effort: project is
 #    still usable if this fails (just FUN_xxxxxxxx everywhere).
 if [[ -x "$REPO_ROOT/fft-ghidra/tools/apply_all_renames.sh" ]]; then
   echo ">>> Applying renames..."

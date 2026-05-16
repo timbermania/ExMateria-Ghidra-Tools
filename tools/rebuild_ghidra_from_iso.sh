@@ -21,7 +21,7 @@
 # beforehand) to fully reproduce the current state from raw ISO.
 #
 # Usage:
-#   GHIDRA_HOME=/opt/ghidra ./research/tools/rebuild_ghidra_from_iso.sh
+#   GHIDRA_HOME=/opt/ghidra ./fft-ghidra/tools/rebuild_ghidra_from_iso.sh
 #
 # Add --listing-only to step 4 if you want to skip decompilation
 # (20-40 min for BATTLE.BIN). Default does both listings + decomp.

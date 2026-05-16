@@ -1,0 +1,80 @@
+# renames_low_sound.tsv — LOW-confidence sound-system renames.
+#
+# Same schema as renames_low.tsv. Loaded automatically by apply_renames_low.py
+# alongside the main LOW file (any sibling matching `renames_low*.tsv`).
+#
+# Confidence basis: cited from the music subsystem's source comments. The
+# music subsystem renders FFT music correctly end-to-end, so the cited
+# functions do roughly what the comments say — but no individual function
+# has been independently validated, so this stays LOW until promoted.
+#
+# Hyp_ prefix: the comment describes mechanics (which bytes get touched) but
+# not the abstract semantic role. Names without Hyp_ have a clearer role.
+#
+# All entries are SCUS-tagged unless explicitly BATTLE.
+
+# === A. SPU register-writer helpers (extend the family already in HIGH) =======
+# Cited in smd-player/src/shared/fft_spu_core_runtime.cpp lines 277, 294, 306
+# next to the four already-HIGH walker helpers (B428/B4B0/B6A4/B720).
+0x8001b79c	SCUS	FN	spu_write_voice_adsr1_mid_nibble	RMW ADSR1 bits 4-7. Mirror cited at fft_spu_core_runtime.cpp:294
+0x8001b938	SCUS	FN	spu_write_voice_adsr1_high_byte	RMW ADSR1 bits 8-15. Mirror cited at fft_spu_core_runtime.cpp:277
+0x8001bab8	SCUS	FN	spu_write_voice_adsr2_low_bits	RMW ADSR2 bits 0-5. Mirror cited at fft_spu_core_runtime.cpp:306
+
+# === B. Pitch-LFO subroutines (called by 0xD7/0xD8 opcodes) ===================
+# Dispatch trace cited in sequencer.gd:984-985 and fft_spu_mixer_native.cpp:312-324.
+0x80016420	SCUS	FN	smd_op_d8_pitch_lfo_init	Opcode 0xD8 — pitch-LFO init dispatch. sequencer.gd:984, native:312
+0x800165ac	SCUS	FN	smd_op_d7_pitch_lfo_depth	Opcode 0xD7 — writes 0x100/(param+1) to ch+0xf8. sequencer.gd:1005
+0x80016bf8	SCUS	FN	pitch_lfo_step_calc	LFO step multiplier; called by 0xD8 init. native:312
+0x80016dc0	SCUS	FN	pitch_lfo_period_reset	LFO countdown-period reload; tail-called by 0xD8. native:319
+
+# === C. Pitch / midi-conversion path ==========================================
+0x80017340	SCUS	FN	pitch_bias_add	Adds bias to midi*256+fine_tune before pitch lookup. sequencer.gd:707
+0x80017424	SCUS	FN	midi_to_spu_pitch_lookup	Converts midi*256+fine_tune to SPU pitch. sequencer.gd:708, native:152
+0x80017744	SCUS	FN	pitch_accum_callback	Per-callback pitch accumulation. sequencer.gd:608
+0x800177a8	SCUS	FN	pitch_accum_step	Inner accum += step routine. sequencer.gd:610
+
+# === D. Music opcode handlers (purpose understood, not yet HIGH-validated) ===
+0x8001621c	SCUS	FN	smd_op_c6_set_adsr1_nibble	Opcode 0xC6 — sets bit 0x100 in ch+0x4, stores ch+0x66. sequencer.gd:79,935
+0x8001b8b0	SCUS	FN	adsr1_low_nibble_apply	Writes (ch+0x66 & 0xf) into ADSR1 low nibble. Called by 0xC6. sequencer.gd:81
+0x800165e4	SCUS	FN	smd_op_da_set_chFE_bit0	Opcode 0xDA — sets bit 0 of ch+0xFE. sequencer.gd:1033
+0x800165fc	SCUS	FN	smd_op_db_clear_chFE_bit0	Opcode 0xDB — clears bit 0 of ch+0xFE. sequencer.gd:1039
+0x8001686c	SCUS	FN	smd_op_set_ch11E_bit0	Opcode that sets bit 0 of ch+0x11E. sequencer.gd:1042-1045
+0x80015a40	SCUS	FN	Hyp_smd_op_loop_counter_setup	Stores numerator at ch+0x38/0x3e, denominator nearby. sequencer.gd:1024
+0x80015ed8	SCUS	FN	Hyp_smd_op_test_ch2d_bit0	Reads byte at ch+0x2d, tests bit 0. sequencer.gd:966
+
+# === E. Data labels ===========================================================
+0x80028d0c	SCUS	GL	smd_opcode_arg_size_table	Per-opcode argument-size lookup. smd_opcodes.gd:37
+0x800290d8	SCUS	GL	pitch_lookup_table_base	Pitch table base; full table dumped from this addr. pitch_table.gd:4
+
+# === F. BATTLE.BIN-side data label (single, narrowly cited) ===================
+0x801908cc	BATTLE	GL	Hyp_per_note_effect_table	Downstream per-note effect table, gates 8+ readers in BATTLE.BIN. sequencer.gd:1045
+
+# === G. Note-handler structure inside smd_interpreter_tick (0x80015324) =======
+# The Note path (opcode bytes 0x00-0x7F) is INLINE within smd_interpreter_tick —
+# not a separate function. These GL labels mark the structural points so the
+# dispatcher reads as an annotated map rather than a black box. Sourced from
+# direct disassembly of 0x80015324-0x80015520 in
+# project-assets/fft-rom/battle_bin_disassembly.txt.
+0x8001536c	SCUS	GL	smd_dispatcher_per_channel_top	Outer loop top: per-channel iteration entry
+0x8001539c	SCUS	GL	smd_dispatcher_byte_fetch_loop_top	Inner loop top: read next opcode byte from stream
+0x800153a4	SCUS	GL	smd_dispatcher_note_or_control_test	sltiu test: byte<0x80=note path, byte>=0x80=control opcode
+0x800153b0	SCUS	GL	smd_note_path_entry	Fall-through entry for byte < 0x80 (note opcodes)
+0x800153c4	SCUS	GL	smd_note_finetune_store	Stages note_byte<<8 into chan+0x92 when bit 0x8 of chan[0] is clear
+0x800153c8	SCUS	GL	smd_note_set_bit_0x100	ori chan+0x0 |= 0x100 (note-pending flag stage 1)
+0x800153d8	SCUS	GL	smd_note_bmidi_lookup_start	Read next byte (key); look up smd_bmidi_key_offset_table
+0x800153f8	SCUS	GL	smd_note_bmidi_store	sb chan+0x7B = chan+0x7C + bmidi_table[key]
+0x80015404	SCUS	GL	smd_note_duration_table_lookup	Look up smd_note_duration_table[key] for tick count
+0x8001541c	SCUS	GL	smd_note_duration_explicit_byte	Branch when duration_table[key]==0: read explicit duration byte
+0x80015428	SCUS	GL	smd_note_state_setup	Set chan+0x68/0x7E and bit 0x200; fold velocity into pitch packing
+0x80015470	SCUS	GL	smd_note_set_bit_0x180	ori chan+0x0 |= 0x180 (note-armed flag)
+0x80015494	SCUS	GL	smd_note_kon_check	Test bit 0x8000 of chan[0]; if set, stage KON via bit 0x300 + bit 0x1FF
+0x800154c8	SCUS	GL	smd_dispatcher_control_opcode_lookup	Branch target for byte>=0x80; converts opcode to (opcode-0x80)*4 jumptable index
+0x800154e4	SCUS	GL	smd_dispatcher_jumptable_load	lw v0, smd_opcode_jumptable[(opcode-0x80)*4]
+0x800154ec	SCUS	GL	smd_dispatcher_handler_call	jalr v0 — call control-opcode handler
+0x80015504	SCUS	GL	smd_dispatcher_post_handler_check	Convergence after note OR control path; loop or exit on bits 0x500
+0x80015518	SCUS	GL	smd_dispatcher_save_stream_exit	Save stream pointer to chan+0x16 then exit inner loop
+
+# === H. Channel-state lookup tables used by the note path =====================
+0x80028b0c	SCUS	GL	smd_opcode_jumptable	128-entry jumptable for control opcodes 0x80-0xFF (4 bytes each)
+0x80028d8c	SCUS	GL	smd_note_duration_table	256-byte: SMD note byte → tick count (0 means read explicit byte from stream)
+0x80028e70	SCUS	GL	smd_bmidi_key_offset_table	256-byte: SMD note byte → bmidi key offset (added to chan+0x7C baseline)

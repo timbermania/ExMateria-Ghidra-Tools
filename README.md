@@ -9,6 +9,7 @@ disassembly/decompilation that other tooling can grep over.
 
 ```
 tools/        Jython postscripts + shell wrappers (analyzeHeadless drivers)
+renames/      Two-tier symbol-rename TSVs + applier scripts
 labels/       Probe-confirmed label table for BATTLE.BIN (TSV, source of truth)
 docs/         Setup guide and quick-start
 ```
@@ -34,6 +35,16 @@ docs/         Setup guide and quick-start
 | `ghidra_disassemble_secondary.py` | Disassemble every 4-byte boundary in the overlay |
 | `ghidra_force_disassemble_battle.py` | Force-disassemble known data-tagged code ranges |
 | `ghidra_apply_effect_sound_annotations.py` | Apply the SMD/SPU effect-sound annotation set |
+
+### `renames/`
+
+Two-tier symbol-rename pipeline for the Ghidra project. `renames_low.tsv`
+holds hypothesised names; `renames_high.tsv` holds validated ones and
+overrides on conflict. Domain-specific add-ons (e.g.
+`renames_high_sound.tsv`) are auto-loaded alongside the base files. Covers
+both the sound system and the particle/VFX effect system. See
+`renames/README.md` for the schema, conflict semantics, and how to
+promote LOW→HIGH.
 
 ### `labels/`
 

@@ -1,0 +1,20 @@
+# renames_low.tsv — LOW-confidence Ghidra symbol renames for the fft-ghidra project.
+#
+# Format: tab-separated. Comments start with #. Blank lines ignored.
+# Columns: address \t binary \t type \t name \t description
+#
+#   address      hex with 0x prefix, lowercase preferred (e.g. 0x801a634c)
+#   binary       BATTLE | SCUS | E001..E511 | * (any program); comma-separated for multiple
+#   type         FN  = function (creates if needed; skips mid-instruction)
+#                GL  = global label
+#                DEL = revert any USER_DEFINED name at this address back to FUN_*/DAT_*
+#   name         the new symbol name; for DEL rows use - as a placeholder
+#   description  freeform; convention is "what + confidence evidence". For LOW, prefix
+#                with `Hyp:` to distinguish hypotheses from facts. No literal tabs.
+#
+# Apply order: this file is applied FIRST. renames_high.tsv overrides any conflicts.
+#
+# To add a hypothesis-quality name as you work: append a row here. When you've
+# behaviorally validated it (decomp confirmation, parity match against a
+# reimplementation, wiki citation), move the row to renames_high.tsv and
+# rerun apply_all_renames.sh.

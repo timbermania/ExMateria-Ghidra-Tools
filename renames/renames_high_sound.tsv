@@ -1,0 +1,56 @@
+# renames_high_sound.tsv — HIGH-confidence sound-system renames.
+#
+# Same schema as renames_high.tsv. Loaded automatically by apply_renames_high.py
+# alongside the main HIGH file (any sibling matching `renames_high*.tsv` is
+# included in the HIGH tier).
+#
+# Confidence basis: function role has been validated against a Godot
+# reimplementation that produces matching audio output.
+#
+# All sound code lives in SCUS_942.21 (0x80010000-0x80066fff), not BATTLE.BIN.
+# This is the boot exec — world-map and menu sounds share the same code path
+# as battle sounds.
+#
+# Interior observation sites (mid-function read/write points used for tracing)
+# are NOT renamed here — they'd hit SKIP_MID_INSTR. Add those to
+# renames_low_sound.tsv with `Hyp:` once the containing function is disassembled.
+
+# === Top-level entry points ===================================================
+0x80012520	SCUS	FN	play_sound	Public SFX entry. Function boundary fixed by fix_function_boundaries.py.
+0x80014590	SCUS	FN	async_commit_walker	Async per-tick walker that drains pending channel updates.
+0x800149DC	SCUS	FN	spu_updater_tick	Per-tick BIOS-callback SPU updater.
+0x80015198	SCUS	FN	per_channel_tick	Per-channel iteration entry inside the per-tick handler. Function boundary fixed by fix_function_boundaries.py.
+0x80015324	SCUS	FN	smd_interpreter_tick	SMD opcode dispatcher loop entry.
+0x8001749C	SCUS	FN	lfo_handler_tick	Per-tick LFO state-machine entry.
+
+# === SMD opcode handlers (dispatched via jump table at 0x80028B0C) ============
+# Canonical handlers — the SMD/feds format is well-documented and the
+# behavioral mapping has been validated against a Godot reimplementation.
+0x80015874	SCUS	FN	smd_rest	Opcode 0x80 — rest for N ticks (note silence)
+0x8001589C	SCUS	FN	smd_fermata	Opcode 0x81 — extend previous note (fermata)
+0x800158F8	SCUS	FN	smd_end_bar	Opcode 0x90 — end-bar handler.
+0x800159DC	SCUS	FN	smd_loop	Opcode 0x91 — loop from current position
+0x800159F0	SCUS	FN	smd_octave	Opcode 0x94 — octave handler.
+0x80015A10	SCUS	FN	smd_raise_octave	Opcode 0x96 — octave +1
+0x80015A28	SCUS	FN	smd_lower_octave	Opcode 0x97 — octave -1
+0x80015AB8	SCUS	FN	smd_repeat	Opcode 0x98 — repeat from current position N times
+0x80015B00	SCUS	FN	smd_coda	Opcode 0x99 — coda (skip-to marker for D.C. al coda)
+0x80015CB0	SCUS	FN	smd_tempo	Opcode 0xA0 — set tempo (microseconds per tick)
+0x80015DD0	SCUS	FN	smd_instrument	Opcode 0xAC — set instrument (program change)
+0x800160E4	SCUS	FN	smd_reverb_on	Opcode 0xC0 — enable reverb send for channel
+0x80016110	SCUS	FN	smd_reverb_off	Opcode 0xC1 — disable reverb send for channel
+0x800161E0	SCUS	FN	smd_release	Opcode 0xC8 — set release portion of envelope
+0x800162B4	SCUS	FN	smd_set_pitch_bend	Opcode 0xD0 — set absolute pitch bend
+0x800162D8	SCUS	FN	smd_add_pitch_bend	Opcode 0xD1 — add-pitch-bend handler.
+0x80016614	SCUS	FN	smd_dynamics	Opcode 0xE0 — dynamics handler (channel velocity scalar).
+0x80016640	SCUS	FN	smd_dynamics_relative_add	Opcode 0xE1 — relative dynamics add. v = (sb_param << 24) + chan+0x98, clamp positive, store back. Also clears chan+0x6 bit 0x8 (disarms any in-flight expression burst) and sets vol-prestage. Jumptable @0x80028C90.
+0x80016680	SCUS	FN	smd_expression	Opcode 0xE2 — expression handler (timed volume ramp). Computes per-tick delta = ((sb_target<<24) - chan+0x98) / seed, stores in chan+0xa0; seeds chan+0xa8 = seed; sets chan+0x6 bit 0x8 to arm the per-tick ramp. Jumptable @0x80028C94. (Ghidra's pre-fix annotation said 0xE1; the dispatcher arithmetic at PC 0x800154e4 with base 0x80028b0c proves 0xE2.)
+0x80016834	SCUS	FN	smd_volume_scale_set	Opcode 0xE3 — sets a fixed vol-scale divisor. Computes scale = 0x100/(param[0]+1) and stores to chan+0x118 / chan+0x11a. No FFT readers of those fields traced; appears to be parity-shadow state. Jumptable @0x80028C98.
+
+# === SPU hardware-register writers (walker helpers) ===========================
+# Validated as the SPU register-writer family invoked by async_commit_walker.
+0x8001B428	SCUS	FN	spu_write_voice_volume_no_sweep	Walker helper: vol_L + vol_R registers, sweep disabled
+0x8001B4B0	SCUS	FN	spu_write_voice_volume_sweep	Walker helper: vol_L + vol_R registers with hardware sweep
+0x8001B628	SCUS	FN	spu_write_voice_pitch	Walker helper: SPU voice pitch register
+0x8001B6A4	SCUS	FN	spu_write_voice_start_addr	Walker helper: SPU ADPCM start address register
+0x8001B720	SCUS	FN	spu_write_voice_repeat_addr	Walker helper: SPU ADPCM repeat (loop) address register
