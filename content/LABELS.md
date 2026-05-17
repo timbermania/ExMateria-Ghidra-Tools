@@ -36,9 +36,9 @@ direct forms below only for one-off / GUI work.
 
 1. Open BATTLE.BIN in Ghidra.
 2. Window → Script Manager.
-3. Add `fft-ghidra/renames/` to your script paths if not already there.
+3. Add `fft-ghidra/tools/` to your script paths if not already there.
 4. Run `fft_apply_labels.py`. When prompted, point it at
-   `fft-ghidra/renames/labels_battle_bin.tsv`.
+   `fft-ghidra/content/labels_battle_bin.tsv`.
 5. Save the program.
 
 ### Headless (direct)
@@ -46,9 +46,9 @@ direct forms below only for one-off / GUI work.
 ```bash
 analyzeHeadless <ghidra-project-dir> <project-name> \
     -process "BATTLE.BIN" \
-    -scriptPath fft-ghidra/renames \
+    -scriptPath fft-ghidra/tools \
     -postScript fft_apply_labels.py \
-      "<absolute-path-to>/fft-ghidra/renames/labels_battle_bin.tsv"
+      "<absolute-path-to>/fft-ghidra/content/labels_battle_bin.tsv"
 ```
 
 Drop `-readOnly` if you want the renames persisted (default in this

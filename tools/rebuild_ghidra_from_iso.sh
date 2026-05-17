@@ -10,9 +10,10 @@
 #                                      (force-D missing ranges, add
 #                                      BATTLE_SECONDARY overlay at
 #                                      base 0x80067000).
-#   3. apply_all_renames.sh         — apply all renames from
-#                                      research/renames/renames_*.tsv
-#                                      (LOW tier then HIGH tier).
+#   3. apply_all_renames.sh         — apply the content pipeline (LOW
+#                                      and HIGH renames, BATTLE labels,
+#                                      JSONL comments) from
+#                                      fft-ghidra/content/.
 #   4. export_ghidra_text.sh        — regenerate
 #                                      project-assets/fft-rom/*.txt
 #                                      and *.c.

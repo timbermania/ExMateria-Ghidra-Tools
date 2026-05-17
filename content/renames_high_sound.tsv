@@ -54,3 +54,12 @@
 0x8001B628	SCUS	FN	spu_write_voice_pitch	Walker helper: SPU voice pitch register
 0x8001B6A4	SCUS	FN	spu_write_voice_start_addr	Walker helper: SPU ADPCM start address register
 0x8001B720	SCUS	FN	spu_write_voice_repeat_addr	Walker helper: SPU ADPCM repeat (loop) address register
+
+# === Pitch lookup tables (effect-sound-parity v2) =============================
+0x80028FE8	SCUS	GL	OCTAVE_SHIFT_LOOKUP	Pitch lookup: octave shifts (128 bytes u8). See comments_scus.jsonl for layout.
+0x80029060	SCUS	GL	SEMITONE_LOOKUP	Pitch lookup: semitone offsets (128 bytes u8). See comments_scus.jsonl for layout.
+0x800290D8	SCUS	GL	PITCH_LOOKUP_TABLE	Pitch lookup table base (12288 u16 entries). Overrides LOW pitch_lookup_table_base.
+
+# === SMD opcode handlers — LFO sub-slot 2 (effect-sound-parity v2) ============
+0x80016974	SCUS	FN	op_ec_lfo_arm_subslot2	SMD opcode 0xEC handler: arm LFO sub-slot 2 (mode 2, pan-LFO).
+0x80016AF0	SCUS	FN	op_ef_clear_subslot2	SMD opcode 0xEF handler: disarm LFO sub-slot 2 (clear bit 0x1 of chan+0x13E).

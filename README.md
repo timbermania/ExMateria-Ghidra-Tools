@@ -8,50 +8,56 @@ disassembly/decompilation that other tooling can grep over.
 ## What's here
 
 ```
-tools/        Jython postscripts + shell wrappers (analyzeHeadless drivers)
-renames/      Three-tier symbol/label TSVs + applier scripts (LOW, HIGH, labels)
-docs/         Setup guide and quick-start
+content/      All data the appliers apply: TSVs, JSONL comments, schemas docs.
+tools/        All implementation: Jython postscripts + shell wrappers.
+docs/         User-facing setup guide and quick-start.
 ```
+
+The split is content vs tooling: open `content/` to *read* what's
+applied to the Ghidra project; open `tools/` to see *how* it's applied.
+
+### `content/`
+
+| File | What it carries |
+|---|---|
+| `renames_low.tsv` + `renames_low_<domain>.tsv` | LOW-confidence symbol renames (hypotheses). |
+| `renames_high.tsv` + `renames_high_<domain>.tsv` | HIGH-confidence renames (validated). Covers sound system + particle/VFX effect system. |
+| `labels_battle_bin.tsv` | Probe-confirmed BATTLE.BIN names + per-row plate/pre comments. |
+| `comments_<binary>.jsonl` | Free-text plate/pre/post comments (multi-line, JSON-escaped). Currently `comments_scus.jsonl`. |
+
+See `content/README.md` for the TSV/JSONL schemas and conflict rules,
+and `content/LABELS.md` for the labels TSV in detail.
 
 ### `tools/`
 
 | Script | Purpose |
 |---|---|
-| `bootstrap_ghidra_project.sh` | First-time setup: create project, import binaries, apply renames |
-| `rebuild_ghidra_from_iso.sh` | End-to-end rebuild from an extracted ISO |
-| `apply_all_renames.sh` | Apply low/high two-tier renames across every imported program |
-| `export_ghidra_text.sh` | Re-export `{scus,battle}_{disassembly.txt,decompilation.c}` |
-| `fix_battle_bin_disassembly.sh` | Apply BATTLE.BIN overlay + force-disassemble fixes |
-| `fft_verify_load.py` | Sanity-check that a Ghidra program loaded at the expected addresses |
-| `ghidra_export_listing.py` | Plain-text listing exporter (Jython) |
-| `ghidra_effect_decompile.py` | Per-function decompiler for an effect's code range |
-| `ghidra_full_decompile.py` | Bulk decompile every function in `currentProgram` |
-| `ghidra_list_programs.py` | Enumerate programs in a Ghidra project |
-| `ghidra_add_battle_overlay.py` | Add the BATTLE.BIN secondary-load overlay block |
-| `ghidra_add_battle_secondary.py` | Variant: secondary block at the second load address |
-| `ghidra_add_runtime_install_80150.py` | Overlay the runtime-installed code region at `0x80150000` |
-| `ghidra_disassemble_secondary.py` | Disassemble every 4-byte boundary in the overlay |
-| `ghidra_force_disassemble_battle.py` | Force-disassemble known data-tagged code ranges |
-| `ghidra_apply_effect_sound_annotations.py` | Apply the SMD/SPU effect-sound annotation set |
+| `bootstrap_ghidra_project.sh` | First-time setup: create project, import binaries, apply content. |
+| `rebuild_ghidra_from_iso.sh` | End-to-end rebuild from an extracted ISO. |
+| `apply_all_renames.sh` | Apply the full content pipeline (LOW → HIGH → labels → comments). |
+| `export_ghidra_text.sh` | Re-export `{scus,battle}_{disassembly.txt,decompilation.c}`. |
+| `fix_battle_bin_disassembly.sh` | Apply BATTLE.BIN overlay + force-disassemble fixes. |
+| `apply_renames_low.py` / `apply_renames_high.py` | Tier appliers for the rename TSVs (Jython). |
+| `fft_apply_labels.py` | Applier for `labels_battle_bin.tsv` (Jython). |
+| `apply_comments.py` | Generic JSONL-driven comments applier (Jython). |
+| `_renames_common.py` | Shared TSV parse / symbol resolution for the rename appliers. |
+| `fix_function_boundaries.py` | One-off helper for `SKIP_MID_INSTR` rows. |
+| `fft_verify_load.py` | Sanity-check that a program loaded at expected addresses. |
+| `ghidra_export_listing.py` | Plain-text listing exporter (Jython). |
+| `ghidra_effect_decompile.py` | Per-function decompiler for an effect's code range. |
+| `ghidra_full_decompile.py` | Bulk decompile every function in `currentProgram`. |
+| `ghidra_list_programs.py` | Enumerate programs in a Ghidra project. |
+| `ghidra_add_battle_overlay.py` / `_secondary.py` | Add the BATTLE.BIN secondary-load overlay block. |
+| `ghidra_add_runtime_install_80150.py` | Overlay the runtime-installed code region at `0x80150000`. |
+| `ghidra_disassemble_secondary.py` | Disassemble every 4-byte boundary in the overlay. |
+| `ghidra_force_disassemble_battle.py` | Force-disassemble known data-tagged code ranges. |
 
-### `renames/`
+### Content application order (later wins on overlap)
 
-Three-tier symbol pipeline applied in order — later tiers override
-earlier ones on the same address:
-
-1. **LOW** (`renames_low*.tsv`) — hypothesised names from static analysis.
-2. **HIGH** (`renames_high*.tsv`) — validated names with behavioural
-   evidence. Covers both the sound system and the particle/VFX effect
-   system. Domain add-ons (e.g. `renames_high_sound.tsv`) are
-   auto-loaded alongside the base files.
-3. **Labels** (`labels_battle_bin.tsv`) — probe-confirmed names with
-   bit-exact parity between PCSX-Redux and the Godot port. Currently
-   BATTLE.BIN-only. Includes plate comments and per-PC annotations
-   beyond what the rename schema carries.
-
-`apply_all_renames.sh` runs all three tiers in sequence. See
-`renames/README.md` for the rename schema and `renames/LABELS.md` for
-the label schema and priority semantics.
+1. **LOW renames** — `content/renames_low*.tsv`.
+2. **HIGH renames** — `content/renames_high*.tsv`. Emits `OVERRIDE:` log lines.
+3. **Labels** (BATTLE.BIN) — `content/labels_battle_bin.tsv` (name + plate/pre cols).
+4. **Comments** (per binary) — `content/comments_<binary>.jsonl`.
 
 ### `docs/`
 
@@ -69,13 +75,13 @@ the label schema and priority semantics.
 ## Typical workflow
 
 ```sh
-# 1. Full pipeline — import + structural fixes + LOW/HIGH/labels.
+# 1. Full pipeline — import + structural fixes + content (all tiers).
 GHIDRA_HOME=/opt/ghidra ./tools/rebuild_ghidra_from_iso.sh
 
 # Or step by step:
-./tools/bootstrap_ghidra_project.sh        # import + LOW + HIGH
+./tools/bootstrap_ghidra_project.sh        # import + apply_all_renames
 ./tools/fix_battle_bin_disassembly.sh      # BATTLE.BIN overlay + force-disasm
-./tools/apply_all_renames.sh               # LOW + HIGH + labels (covers the overlay)
+./tools/apply_all_renames.sh               # re-apply content (covers the overlay)
 ./tools/export_ghidra_text.sh              # regenerate text exports
 ```
 

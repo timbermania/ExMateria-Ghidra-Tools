@@ -3,24 +3,24 @@
 # Ghidra Jython postScript: apply probe-confirmed function names and
 # annotations to BATTLE.BIN.
 #
-# Source of truth: fft-ghidra/renames/labels_battle_bin.tsv. Every entry
+# Source of truth: fft-ghidra/content/labels_battle_bin.tsv. Every entry
 # corresponds to a probe whose value-level output pairs bit-exactly between
 # PCSX-Redux and Godot (per research/effect_alignment/last_run/probe_pairs.json),
 # so the FFT-side semantics described in each plate comment are confirmed.
 #
-# This is the "confirmed" tier on top of LOW/HIGH renames — runs last so it
-# wins on any address overlap with the rename TSVs.
+# This is the "labels" tier — runs after LOW/HIGH renames and before the
+# JSONL comments pass, so it wins on any address overlap with the rename TSVs.
 #
 # Idempotent: running twice is a no-op (skips functions already at the target
 # name, skips comments already matching).
 #
 # Usage (headless): normally invoked via fft-ghidra/tools/apply_all_renames.sh
-# as the final tier. Direct invocation:
+# as part of the content pipeline. Direct invocation:
 #   analyzeHeadless <projectDir> <projectName> \
 #       -process "BATTLE.BIN" \
-#       -scriptPath fft-ghidra/renames \
+#       -scriptPath fft-ghidra/tools \
 #       -postScript fft_apply_labels.py \
-#         "<absolute-path>/fft-ghidra/renames/labels_battle_bin.tsv" \
+#         "<absolute-path>/fft-ghidra/content/labels_battle_bin.tsv" \
 #       -readOnly
 #
 # Usage (GUI): Window → Script Manager → run fft_apply_labels.py and pass
