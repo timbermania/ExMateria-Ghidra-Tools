@@ -1,12 +1,15 @@
 # -*- coding: utf-8 -*-
 # fft_apply_labels.py
-# Ghidra Jython postScript: apply probe-confirmed function names and
-# annotations to BATTLE.BIN.
+# Ghidra Jython postScript: apply probe-confirmed function/label names plus
+# plate/pre comments from a labels TSV to currentProgram.
 #
-# Source of truth: fft-ghidra/content/labels_battle_bin.tsv. Every entry
-# corresponds to a probe whose value-level output pairs bit-exactly between
-# PCSX-Redux and Godot (per research/effect_alignment/last_run/probe_pairs.json),
+# Source of truth: fft-ghidra/content/labels_<binary>.tsv (e.g. labels_scus.tsv).
+# Every entry corresponds to a probe whose value-level output pairs bit-exactly
+# between PCSX-Redux and Godot (per research/effect_alignment/last_run/probe_pairs.json),
 # so the FFT-side semantics described in each plate comment are confirmed.
+#
+# Each labels TSV must address PCs that live in a single program's memory map.
+# Rows whose PC is outside the addressed program log a WARN and skip.
 #
 # This is the "labels" tier — runs after LOW/HIGH renames and before the
 # JSONL comments pass, so it wins on any address overlap with the rename TSVs.
@@ -17,14 +20,14 @@
 # Usage (headless): normally invoked via fft-ghidra/tools/apply_all_renames.sh
 # as part of the content pipeline. Direct invocation:
 #   analyzeHeadless <projectDir> <projectName> \
-#       -process "BATTLE.BIN" \
+#       -process "SCUS_942.21" \
 #       -scriptPath fft-ghidra/tools \
 #       -postScript fft_apply_labels.py \
-#         "<absolute-path>/fft-ghidra/content/labels_battle_bin.tsv" \
+#         "<absolute-path>/fft-ghidra/content/labels_scus.tsv" \
 #       -readOnly
 #
 # Usage (GUI): Window → Script Manager → run fft_apply_labels.py and pass
-# the absolute path to labels_battle_bin.tsv when prompted (via askFile).
+# the absolute path to the labels TSV when prompted (via askFile).
 #
 # @category FFT
 # @runtime Jython
@@ -44,7 +47,7 @@ args = getScriptArgs()
 if len(args) >= 1:
     tsv_path = args[0]
 else:
-    f = askFile("Select labels_battle_bin.tsv", "Apply")
+    f = askFile("Select labels TSV", "Apply")
     tsv_path = f.getAbsolutePath()
 
 if not os.path.exists(tsv_path):

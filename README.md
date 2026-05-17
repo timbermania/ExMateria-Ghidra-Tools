@@ -22,7 +22,7 @@ applied to the Ghidra project; open `tools/` to see *how* it's applied.
 |---|---|
 | `renames_low.tsv` + `renames_low_<domain>.tsv` | LOW-confidence symbol renames (hypotheses). |
 | `renames_high.tsv` + `renames_high_<domain>.tsv` | HIGH-confidence renames (validated). Covers sound system + particle/VFX effect system. |
-| `labels_battle_bin.tsv` | Probe-confirmed BATTLE.BIN names + per-row plate/pre comments. |
+| `labels_<binary>.tsv` | Probe-confirmed names + per-row plate/pre comments for one program (e.g. `labels_scus.tsv`). |
 | `comments_<binary>.jsonl` | Free-text plate/pre/post comments (multi-line, JSON-escaped). Currently `comments_scus.jsonl`. |
 
 See `content/README.md` for the TSV/JSONL schemas and conflict rules,
@@ -38,7 +38,7 @@ and `content/LABELS.md` for the labels TSV in detail.
 | `export_ghidra_text.sh` | Re-export `{scus,battle}_{disassembly.txt,decompilation.c}`. |
 | `fix_battle_bin_disassembly.sh` | Apply BATTLE.BIN overlay + force-disassemble fixes. |
 | `apply_renames_low.py` / `apply_renames_high.py` | Tier appliers for the rename TSVs (Jython). |
-| `fft_apply_labels.py` | Applier for `labels_battle_bin.tsv` (Jython). |
+| `fft_apply_labels.py` | Applier for `labels_<binary>.tsv` (Jython). |
 | `apply_comments.py` | Generic JSONL-driven comments applier (Jython). |
 | `_renames_common.py` | Shared TSV parse / symbol resolution for the rename appliers. |
 | `fix_function_boundaries.py` | One-off helper for `SKIP_MID_INSTR` rows. |
@@ -56,7 +56,7 @@ and `content/LABELS.md` for the labels TSV in detail.
 
 1. **LOW renames** — `content/renames_low*.tsv`.
 2. **HIGH renames** — `content/renames_high*.tsv`. Emits `OVERRIDE:` log lines.
-3. **Labels** (BATTLE.BIN) — `content/labels_battle_bin.tsv` (name + plate/pre cols).
+3. **Labels** (per binary) — `content/labels_<binary>.tsv` (name + plate/pre cols).
 4. **Comments** (per binary) — `content/comments_<binary>.jsonl`.
 
 ### `docs/`

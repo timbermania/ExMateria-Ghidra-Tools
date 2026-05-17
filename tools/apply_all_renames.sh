@@ -3,10 +3,10 @@
 # fft-ghidra Ghidra project. Re-runnable; idempotent.
 #
 # Tiers, applied in order (later wins on overlap):
-#   1. LOW    renames   — content/renames_low*.tsv
-#   2. HIGH   renames   — content/renames_high*.tsv  (emits OVERRIDE: vs LOW)
-#   3. labels (BATTLE)  — content/labels_battle_bin.tsv  (names + comments)
-#   4. comments (SCUS)  — content/comments_scus.jsonl    (plate/pre/post text)
+#   1. LOW    renames     — content/renames_low*.tsv
+#   2. HIGH   renames     — content/renames_high*.tsv  (emits OVERRIDE: vs LOW)
+#   3. labels (per binary) — content/labels_<key>.tsv   (names + plate/pre cols)
+#   4. comments (per binary) — content/comments_<key>.jsonl (plate/pre/post text)
 #
 # Usage:
 #   ./apply_all_renames.sh                # all 14 default programs
@@ -55,19 +55,24 @@ for prog in "${PROGRAMS[@]}"; do
   done
 done
 
-# Tier 3: labels (currently BATTLE.BIN only — TSV is binary-specific).
-LABELS_TSV="$CONTENT_DIR/labels_battle_bin.tsv"
+# Tier 3: labels (per binary). One TSV per program if present. Each TSV's
+# rows must address PCs that live inside its target program's memory map —
+# cross-binary rows fail silently as `fn: FAIL_CREATE` / `WARN: no code unit`.
 for prog in "${PROGRAMS[@]}"; do
-  if [[ "$prog" == "BATTLE.BIN" && -f "$LABELS_TSV" ]]; then
-    echo "=== BATTLE.BIN / labels ===" | tee -a "$LOG"
+  case "$prog" in
+    SCUS_942.21)  labels_file="$CONTENT_DIR/labels_scus.tsv" ;;
+    BATTLE.BIN)   labels_file="$CONTENT_DIR/labels_battle_bin.tsv" ;;
+    *)            continue ;;
+  esac
+  if [[ -f "$labels_file" ]]; then
+    echo "=== $prog / labels ===" | tee -a "$LOG"
     "$ANALYZE" "$GHIDRA_PROJ_DIR" "$GHIDRA_PROJ_NAME" \
-      -process "BATTLE.BIN" \
+      -process "$prog" \
       -noanalysis \
       -scriptPath "$TOOLS_DIR" \
-      -postScript "fft_apply_labels.py" "$LABELS_TSV" \
+      -postScript "fft_apply_labels.py" "$labels_file" \
       2>&1 | tee -a "$LOG" \
       | grep -E "^0x[0-9a-fA-F]+[[:space:]]+(function|label)|Summary:|ERROR|WARN" || true
-    break
   fi
 done
 

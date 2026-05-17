@@ -13,7 +13,7 @@ and the shell wrapper) lives in `../tools/`.
 | `renames_low_<domain>.tsv` | Optional domain add-ons (e.g. `renames_low_sound.tsv`). Auto-loaded alongside the base LOW file. |
 | `renames_high.tsv` | HIGH-confidence (validated) symbol renames. |
 | `renames_high_<domain>.tsv` | Optional domain add-ons (e.g. `renames_high_sound.tsv`). |
-| `labels_battle_bin.tsv` | Probe-confirmed names + plate/pre comments for BATTLE.BIN. See `LABELS.md`. |
+| `labels_<binary>.tsv` | Probe-confirmed names + plate/pre comments for one program (e.g. `labels_scus.tsv`). See `LABELS.md`. |
 | `comments_<binary>.jsonl` | Plate/pre/post comment bodies, one JSON object per line. Currently `comments_scus.jsonl`. |
 | `run.log` | Latest output of the wrapper. Not committed. |
 
@@ -26,7 +26,7 @@ order. See `../tools/apply_all_renames.sh` for the canonical pipeline.
 
 1. **LOW renames** — every `renames_low*.tsv`.
 2. **HIGH renames** — every `renames_high*.tsv`. Emits `OVERRIDE:` log lines when overriding a LOW name.
-3. **Labels** (BATTLE.BIN only) — `labels_battle_bin.tsv`.
+3. **Labels** (per binary) — `labels_<binary>.tsv`. Each file targets one program; cross-binary rows fail silently as `WARN: no code unit`.
 4. **Comments** (per binary) — `comments_<binary>.jsonl`.
 
 The label and comment tiers are separate analyzeHeadless invocations
