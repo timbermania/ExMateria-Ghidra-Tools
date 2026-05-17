@@ -5,146 +5,146 @@
 # Sound-system entries live in renames_high_sound.tsv (auto-loaded alongside).
 
 # === Functions ================================================================
-0x8001b9f4	SCUS	FN	rsin
-0x8001bc28	SCUS	FN	rcos
-0x8001c068	SCUS	FN	vec3_normalize
-0x8001d0a8	SCUS	FN	load_gte_matrix
-0x8001d578	SCUS	FN	rotate_vector
-0x8001d658	SCUS	FN	build_rotation_matrix
-0x80023bb4	SCUS	FN	AddPrim
-0x80023ce0	SCUS	FN	SetLineF2
-0x80044414	SCUS	FN	alloc_gpu_primitive
-0x80068b54	BATTLE	FN	apply_unit_ability_reaction
-0x80068bd4	BATTLE	FN	trigger_unit_hit_reaction
-0x80068e30	BATTLE	FN	refresh_unit_tile_state
-0x8008be7c	BATTLE	FN	trigger_unit_animations_by_param
-0x8008e328	BATTLE	FN	set_frame_pacing
-0x8008e348	BATTLE	FN	clear_frame_pacing
-0x801a0e80	BATTLE	FN	effect_file_init
-0x801a1200	BATTLE	FN	lookup_time_scale_p1
-0x801a1244	BATTLE	FN	lookup_time_scale_p2
-0x801a18d8	BATTLE	FN	effect_system_main_loop
-0x801a1d9c	BATTLE	FN	effect_cleanup
-0x801a2374	BATTLE	FN	op_set_texture_page
-0x801a2c28	BATTLE	FN	op_branch_anim_done
-0x801a2c7c	BATTLE	FN	op_branch_anim_done_complex
-0x801a2eb4	BATTLE	FN	update_all_particles
-0x801a3148	BATTLE	FN	op_init_physics_params
-0x801a31a8	BATTLE	FN	process_keyframe_actions
-0x801a3408	BATTLE	FN	for_each_phase_timeline_tick
-0x801a3d30	BATTLE	FN	dispatch_unit_triggers_and_register_callback
-0x801a4000	BATTLE	FN	process_particle_channel_and_unit_triggers
-0x801a41a0	BATTLE	FN	advance_affected_units_palette_track
-0x801a436c	BATTLE	FN	advance_caster_palette_track
-0x801a444c	BATTLE	FN	advance_target_palette_track
-0x801a45c8	BATTLE	FN	advance_screen_color_track
-0x801a4838	BATTLE	FN	outer_phases_timeline_tick
-0x801a4cf0	BATTLE	FN	effect_script_dispatcher
-0x801a522c	BATTLE	FN	allocate_sprite_primitives
-0x801a52b4	BATTLE	FN	deallocate_sprite_primitives
-0x801a5394	BATTLE	FN	submit_sprite_to_ordering_table
-0x801a5b84	BATTLE	FN	particle_allocator
-0x801a5d74	BATTLE	FN	deallocate_particle
-0x801a5ea4	BATTLE	FN	update_particle_render_state
-0x801a634c	BATTLE	FN	emitter_control_routine
-0x801a8690	BATTLE	FN	random_in_range
-0x801a8898	BATTLE	FN	lerp_component
-0x801a894c	BATTLE	FN	interp_cosine_a
-0x801a89b0	BATTLE	FN	interp_cosine_b
-0x801a8a14	BATTLE	FN	interp_linear
-0x801a8be0	BATTLE	FN	lerp_u8
-0x801a95e8	BATTLE	FN	apply_random_position_shake
-0x801a9984	BATTLE	FN	set_gravity_vector
-0x801a99ac	BATTLE	FN	set_inertia_threshold
-0x801a9bb0	BATTLE	FN	integrate_particle_motion
-0x801aa008	BATTLE	FN	allocate_animation_state
-0x801aa1a0	BATTLE	FN	init_particle_animation
-0x801aa1f8	BATTLE	FN	render_particle_sprite
-0x801aad98	BATTLE	FN	execute_camera_angle_command
-0x801ab1d4	BATTLE	FN	execute_camera_position_command
-0x801ab590	BATTLE	FN	execute_camera_zoom_command
-0x801ab724	BATTLE	FN	camera_state_machine
-0x801acb08	BATTLE	FN	find_active_camera_keyframe
-0x801ad198	BATTLE	FN	advance_camera_tracks
-0x801b0fec	BATTLE	FN	charge_vfx_handler_0
-0x801b0ffc	BATTLE	FN	render_spell_charge_lines
-0x801b153c	BATTLE	FN	charge_vfx_handler_2
-0x801b1aec	BATTLE	FN	charge_vfx_handler_3
-0x801b1c04	BATTLE	FN	render_summon_charge_orbs
-0x801b27dc	BATTLE	FN	render_summon_charge_aura
-0x801b47e0	BATTLE	FN	process_charge_vfx
+0x8001b9f4	SCUS	FN	rsin	Math: sine via fixed-point lookup (rsin). [MN]
+0x8001bc28	SCUS	FN	rcos	Math: cosine via fixed-point lookup (rcos). [MD:MIPS_EMBEDDED_CODE.md]
+0x8001c068	SCUS	FN	vec3_normalize	Math: normalise a 3-vec via 1/sqrt. [MN]
+0x8001d0a8	SCUS	FN	load_gte_matrix	GTE: load matrix into co-processor 2 (matrix_ptr -> GTE regs). [MD:CUSTOM_EFFECT_HOOKS.md]
+0x8001d578	SCUS	FN	rotate_vector	GTE: rotate input xyz via current matrix; world->screen with depth out. [MD:CUSTOM_EFFECT_HOOKS.md]
+0x8001d658	SCUS	FN	build_rotation_matrix	Build rotation matrix; called before rotate_vector. [MD:CURVE_ANALYSIS.md]
+0x80023bb4	SCUS	FN	AddPrim	PSX GPU: enqueue primitive on ordering table (AddPrim libgs equivalent). [MD:CUSTOM_EFFECT_HOOKS.md]
+0x80023ce0	SCUS	FN	SetLineF2	PSX GPU: init LINE_G2 (gouraud line) primitive header. [MD:CUSTOM_EFFECT_HOOKS.md]
+0x80044414	SCUS	FN	alloc_gpu_primitive	Allocate GPU primitive buffer from per-frame pool. [MD:handler_1_spell_charge_arc_system.md]
+0x80068b54	BATTLE	FN	apply_unit_ability_reaction	Battle: apply unit ability reaction (counter/dodge/etc). [MN]
+0x80068bd4	BATTLE	FN	trigger_unit_hit_reaction	Battle: trigger unit hit reaction (sprite + sfx). [MN]
+0x80068e30	BATTLE	FN	refresh_unit_tile_state	Refresh unit tile state; 35+ callers across battle/animation. [MD:animation_event_system.md]
+0x8008be7c	BATTLE	FN	trigger_unit_animations_by_param	Trigger unit animations selected by param byte. [MN]
+0x8008e328	BATTLE	FN	set_frame_pacing	Set frame-pacing value (1-9); writes g_frame_pacing_value. [SD]
+0x8008e348	BATTLE	FN	clear_frame_pacing	Clear frame-pacing value (g_frame_pacing_value = 0). [SD]
+0x801a0e80	BATTLE	FN	effect_file_init	Effect: initialise file state (header parse, section pointer setup). [MD:TEXTURE_AND_PALETTE_FORMAT.md]
+0x801a1200	BATTLE	FN	lookup_time_scale_p1	Lookup time-scale Pattern 1 from curve offset 0x00 by timeline_frame_counter. [SD]
+0x801a1244	BATTLE	FN	lookup_time_scale_p2	Lookup time-scale Pattern 2 from curve offset 0x12C by anim_progress. [SD]
+0x801a18d8	BATTLE	FN	effect_system_main_loop	Effect system main loop; runs every frame, dispatches per-effect tick. [SD/EM]
+0x801a1d9c	BATTLE	FN	effect_cleanup	Effect cleanup; release resources for completed effect_index. [SD]
+0x801a2374	BATTLE	FN	op_set_texture_page	Script opcode 5 handler: set current_texture_page global. [MD:PSX_TPAGE_RESEARCH.md]
+0x801a2c28	BATTLE	FN	op_branch_anim_done	Script handler 29: timing branch on anim_frame vs global. [MD:WIP_SCRIPT_REGISTERS.md]
+0x801a2c7c	BATTLE	FN	op_branch_anim_done_complex	Script handler 30: complex timing branch (anim_done compound). [MD:WIP_SCRIPT_REGISTERS.md]
+0x801a2eb4	BATTLE	FN	update_all_particles	Update all active particles for an effect state. [SD]
+0x801a3148	BATTLE	FN	op_init_physics_params	Script opcode: init physics params (gravity/inertia) on EffectState. [SD]
+0x801a31a8	BATTLE	FN	process_keyframe_actions	Process keyframe actions for current timeline frame. [MN]
+0x801a3408	BATTLE	FN	for_each_phase_timeline_tick	Pattern 2 timeline tick (opcode 40 handler): iterate phases. [EM]
+0x801a3d30	BATTLE	FN	dispatch_unit_triggers_and_register_callback	Timeline keyframe -> dispatch unit triggers + register callback. [MD:MIPS_CALLBACK_SYSTEM.md]
+0x801a4000	BATTLE	FN	process_particle_channel_and_unit_triggers	Per-frame: process particle channels + unit triggers from timeline. [MD:MIPS_CALLBACK_SYSTEM.md]
+0x801a41a0	BATTLE	FN	advance_affected_units_palette_track	Pattern 1 track: advance affected-units palette interpolation. [SD]
+0x801a436c	BATTLE	FN	advance_caster_palette_track	Pattern 1 track: advance caster palette interpolation. [SD]
+0x801a444c	BATTLE	FN	advance_target_palette_track	Pattern 1 track: advance target palette interpolation. [SD]
+0x801a45c8	BATTLE	FN	advance_screen_color_track	Pattern 1 track: advance screen-color (full-frame tint) interpolation. [SD]
+0x801a4838	BATTLE	FN	outer_phases_timeline_tick	Pattern 1 timeline tick (opcode 41 handler): outer-phase iterator. [EM]
+0x801a4cf0	BATTLE	FN	effect_script_dispatcher	Effect script dispatcher; decodes opcode and jumps via handler table. [SD/EM]
+0x801a522c	BATTLE	FN	allocate_sprite_primitives	Allocate sprite primitives for an effect frame. [MN]
+0x801a52b4	BATTLE	FN	deallocate_sprite_primitives	Deallocate sprite primitives back to pool. [MN]
+0x801a5394	BATTLE	FN	submit_sprite_to_ordering_table	Submit sprite to GPU ordering table for current frame. [MD:FRAMESET_HEADER_FLAGS_ANALYSIS.md]
+0x801a5b84	BATTLE	FN	particle_allocator	Allocate particle from free pool; link into active list. [MN]
+0x801a5d74	BATTLE	FN	deallocate_particle	Deallocate particle; unlink and return to free pool. [SD]
+0x801a5ea4	BATTLE	FN	update_particle_render_state	Update particle render state (sprite offset, screen pos, rotation). [SD]
+0x801a634c	BATTLE	FN	emitter_control_routine	Per-frame emitter control routine; spawns particles per emitter config. [SD/EM]
+0x801a8690	BATTLE	FN	random_in_range	Random in range [lo, hi); used by emitter spawn jitter. [SD]
+0x801a8898	BATTLE	FN	lerp_component	Linear interp on a single component (a + (b-a)*t). [SD]
+0x801a894c	BATTLE	FN	interp_cosine_a	Cosine-eased interpolation, variant A. [SD]
+0x801a89b0	BATTLE	FN	interp_cosine_b	Cosine-eased interpolation, variant B. [SD]
+0x801a8a14	BATTLE	FN	interp_linear	Linear interpolation (a + (b-a)*t). [SD]
+0x801a8be0	BATTLE	FN	lerp_u8	u8 lerp; used by particle count calculation. [ML]
+0x801a95e8	BATTLE	FN	apply_random_position_shake	Apply random shake offset to particle position. [SD]
+0x801a9984	BATTLE	FN	set_gravity_vector	Set global gravity vector (x,y,z) from i32 array. [SD]
+0x801a99ac	BATTLE	FN	set_inertia_threshold	Set global inertia threshold (terminal velocity cap). [SD]
+0x801a9bb0	BATTLE	FN	integrate_particle_motion	Integrate particle motion (apply velocity, gravity, inertia). [SD]
+0x801aa008	BATTLE	FN	allocate_animation_state	Allocate animation state slot from anim_state pool. [MN]
+0x801aa1a0	BATTLE	FN	init_particle_animation	Initialise particle animation state (sprite/frame/timing). [MN]
+0x801aa1f8	BATTLE	FN	render_particle_sprite	Render single particle sprite to GPU primitives (RGB tint applied). [SD]
+0x801aad98	BATTLE	FN	execute_camera_angle_command	Execute camera-angle command from camera track. [SD]
+0x801ab1d4	BATTLE	FN	execute_camera_position_command	Execute camera-position command from camera track. [SD]
+0x801ab590	BATTLE	FN	execute_camera_zoom_command	Execute camera-zoom command from camera track. [SD]
+0x801ab724	BATTLE	FN	camera_state_machine	Camera state machine; orchestrates angle/position/zoom commands. [SD]
+0x801acb08	BATTLE	FN	find_active_camera_keyframe	Find active camera keyframe for current frame counter. [SD]
+0x801ad198	BATTLE	FN	advance_camera_tracks	Per-frame: advance all three camera tracks (angle/position/zoom). [SD]
+0x801b0fec	BATTLE	FN	charge_vfx_handler_0	Charge VFX handler 0: no-op (returns 0). [MD:SPELL_CHARGE_EFFECT_SYSTEM.md]
+0x801b0ffc	BATTLE	FN	render_spell_charge_lines	Render spell-charge lines (func_id 0x01). [MD:CUSTOM_EFFECT_HOOKS.md]
+0x801b153c	BATTLE	FN	charge_vfx_handler_2	Charge VFX handler 2: magic-circle prep (summon preparation). [MD:SPELL_CHARGE_EFFECT_SYSTEM.md]
+0x801b1aec	BATTLE	FN	charge_vfx_handler_3	Charge VFX handler 3: (effect role unclear; jump table entry). [MD:SPELL_CHARGE_EFFECT_SYSTEM.md]
+0x801b1c04	BATTLE	FN	render_summon_charge_orbs	Render summon-charge orbital orbs. [MD:CUSTOM_EFFECT_HOOKS.md]
+0x801b27dc	BATTLE	FN	render_summon_charge_aura	Render summon-charge aura (orbiting spheres handler 5). [MD:SPELL_CHARGE_EFFECT_SYSTEM.md]
+0x801b47e0	BATTLE	FN	process_charge_vfx	Process charge VFX (sound/child-effect handler under investigation). [MD:CAMERA_SHAKE_SYSTEM_WIP.md]
 
 # === Global labels ============================================================
-0x8004598c	SCUS	GL	frame_pacing_timer
-0x80045998	SCUS	GL	g_frame_pacing_value
-0x801b48d0	BATTLE	GL	effect_file_table
-0x801b63e8	BATTLE	GL	effect_system_state
-0x801b67c8	BATTLE	GL	effect_handler_jump_table
-0x801b69a8	BATTLE	GL	heap_free_list
-0x801b69cc	BATTLE	GL	g_camera_track1_state
-0x801b69d0	BATTLE	GL	g_camera_track2_state
-0x801b69d4	BATTLE	GL	g_camera_track3_state
-0x801b8900	BATTLE	GL	g_charge_vfx_handlers
-0x801b8a40	BATTLE	GL	gravity_x
-0x801b8a44	BATTLE	GL	gravity_y
-0x801b8a48	BATTLE	GL	gravity_z
-0x801b8a4c	BATTLE	GL	inertia_threshold
-0x801b8a60	BATTLE	GL	camera_track1_data
-0x801b8a88	BATTLE	GL	camera_track2_data
-0x801b8ad0	BATTLE	GL	camera_track3_data
-0x801b8ad8	BATTLE	GL	camera_saved_x
-0x801b8adc	BATTLE	GL	camera_saved_y
-0x801b8ae0	BATTLE	GL	camera_saved_z
-0x801b8ae4	BATTLE	GL	camera_saved_w
-0x801b8ae8	BATTLE	GL	camera_start_x
-0x801b8aec	BATTLE	GL	camera_start_y
-0x801b8af0	BATTLE	GL	camera_start_z
-0x801b8af4	BATTLE	GL	camera_start_w
-0x801b8af8	BATTLE	GL	camera_current_x
-0x801b8afc	BATTLE	GL	camera_current_y
-0x801b8b00	BATTLE	GL	camera_current_z
-0x801b8b04	BATTLE	GL	camera_current_w
-0x801b8b9c	BATTLE	GL	g_charge_slots
-0x801b8b9f	BATTLE	GL	g_charge_slot_func_id_base
-0x801b9130	BATTLE	GL	g_charge_slot_list_head
-0x801b9134	BATTLE	GL	g_charge_slot_free_head
-0x801b9138	BATTLE	GL	g_current_charge_slot_index
-0x801b9158	BATTLE	GL	free_effect_list_head
-0x801b9258	BATTLE	GL	time_scale_ptr
-0x801b9270	BATTLE	GL	particle_pool_head
-0x801bacc8	BATTLE	GL	effect_flags_ptr
-0x801bad0c	BATTLE	GL	effect_context_value
-0x801bade4	BATTLE	GL	line_count
-0x801bade8	BATTLE	GL	line_index_array
-0x801badec	BATTLE	GL	line_frame_counter
-0x801badf0	BATTLE	GL	line_pos_x
-0x801badf2	BATTLE	GL	line_pos_y
-0x801badf4	BATTLE	GL	line_pos_z
-0x801badf8	BATTLE	GL	line_time_scale
-0x801badfe	BATTLE	GL	line_buffer_x
-0x801bae00	BATTLE	GL	line_buffer_z
-0x801bbf64	BATTLE	GL	effect_target_unit
-0x801bbf78	BATTLE	GL	sprite_def_table_ptr
-0x801bbf7c	BATTLE	GL	effect_anim_tbl_ptr
-0x801bbf80	BATTLE	GL	texture_data_ptr
-0x801bbf84	BATTLE	GL	timeline_channel_base
-0x801bbf88	BATTLE	GL	effect_data_ptr
-0x801bbf8c	BATTLE	GL	animation_table_ptr
-0x801bbf90	BATTLE	GL	active_effect_list_head
-0x801bc094	BATTLE	GL	script_bytecode_ptr
-0x801bc098	BATTLE	GL	g_current_charge_slot_ptr
-0x801bc0c8	BATTLE	GL	timeline_section_ptr
-0x801bc0cc	BATTLE	GL	g_ordering_table_ptr
-0x801bf000	BATTLE	GL	current_texture_page
-0x801bf00a	BATTLE	GL	anim_state_free_head
-0x801bf02c	BATTLE	GL	effect_state_array_base
-0x801c00a4	BATTLE	GL	anim_state_pool_base
-0x801c24c8	BATTLE	GL	effect_phase_state
-0x801c24d0	BATTLE	GL	current_effect_index
-0x801c24d4	BATTLE	GL	child_effect_index
-0x801c24da	BATTLE	GL	anim_state_alloc_head
-0x801cc074	BATTLE	GL	sprite_buffer_base
-0x801cc094	BATTLE	GL	sprite_buffer_1
-0x801cc0b4	BATTLE	GL	sprite_buffer_2
-0x801cc0d4	BATTLE	GL	sprite_buffer_3
-0x801cc0f4	BATTLE	GL	sprite_buffer_4
+0x8004598c	SCUS	GL	frame_pacing_timer	Frame pacing countdown timer (0-16); compared against g_frame_pacing_value. [SD]
+0x80045998	SCUS	GL	g_frame_pacing_value	Current frame pacing value (1-9); higher = more frame skipping. [SD]
+0x801b48d0	BATTLE	GL	effect_file_table	Effect file base lookup table (E### -> RAM address). [MD:LUA_DEBUGGING.md]
+0x801b63e8	BATTLE	GL	effect_system_state	Effect system state machine current state. [SD]
+0x801b67c8	BATTLE	GL	effect_handler_jump_table	Effect script opcode handler jump table (46 handlers). [SD/EM]
+0x801b69a8	BATTLE	GL	heap_free_list	Heap free list head for effect-system allocations. [MN]
+0x801b69cc	BATTLE	GL	g_camera_track1_state	Camera track 1 state: 0 = idle, 0x200+ = interpolation state. [SD]
+0x801b69d0	BATTLE	GL	g_camera_track2_state	Camera track 2 state: 0 = idle, 0x200+ = interpolation state. [SD]
+0x801b69d4	BATTLE	GL	g_camera_track3_state	Camera track 3 state: 0 = idle, 0x200+ = interpolation state. [SD]
+0x801b8900	BATTLE	GL	g_charge_vfx_handlers	Spell-charge VFX render function jump table base. [MD:SPELL_CHARGE_EFFECT_SYSTEM.md]
+0x801b8a40	BATTLE	GL	gravity_x	Global gravity X (typically 0). [SD]
+0x801b8a44	BATTLE	GL	gravity_y	Global gravity Y (typically 0x1000 = downward). [SD]
+0x801b8a48	BATTLE	GL	gravity_z	Global gravity Z (typically 0). [SD]
+0x801b8a4c	BATTLE	GL	inertia_threshold	Global inertia threshold (typically 560). [SD]
+0x801b8a60	BATTLE	GL	camera_track1_data	Camera track 1 data: frames_total + interpolation state. [SD]
+0x801b8a88	BATTLE	GL	camera_track2_data	Camera track 2 data: frames_total + interpolation state. [SD]
+0x801b8ad0	BATTLE	GL	camera_track3_data	Camera track 3 data: frames_total + interpolation state. [SD]
+0x801b8ad8	BATTLE	GL	camera_saved_x	Camera saved-position X (restore-after-effect). [MN]
+0x801b8adc	BATTLE	GL	camera_saved_y	Camera saved-position Y (restore-after-effect). [MN]
+0x801b8ae0	BATTLE	GL	camera_saved_z	Camera saved-position Z (restore-after-effect). [MN]
+0x801b8ae4	BATTLE	GL	camera_saved_w	Camera saved-position W (zoom; restore-after-effect). [MN]
+0x801b8ae8	BATTLE	GL	camera_start_x	Camera start-position X (interpolation source). [MD:CAMERA_SYSTEM.md]
+0x801b8aec	BATTLE	GL	camera_start_y	Camera start-position Y (interpolation source). [MN]
+0x801b8af0	BATTLE	GL	camera_start_z	Camera start-position Z (interpolation source). [MN]
+0x801b8af4	BATTLE	GL	camera_start_w	Camera start-position W (zoom; interpolation source). [MN]
+0x801b8af8	BATTLE	GL	camera_current_x	Camera current-position X (interpolation result). [MN]
+0x801b8afc	BATTLE	GL	camera_current_y	Camera current-position Y (interpolation result). [MN]
+0x801b8b00	BATTLE	GL	camera_current_z	Camera current-position Z (interpolation result). [MN]
+0x801b8b04	BATTLE	GL	camera_current_w	Camera current-position W (zoom; interpolation result). [MN]
+0x801b8b9c	BATTLE	GL	g_charge_slots	Spell-charge effect target data table base. [MD:SPELL_CHARGE_EFFECT_SYSTEM.md]
+0x801b8b9f	BATTLE	GL	g_charge_slot_func_id_base	Spell-charge slot func_id base; (base + slot_offset) stores func_id byte. [MD:SPELL_CHARGE_EFFECT_SYSTEM.md]
+0x801b9130	BATTLE	GL	g_charge_slot_list_head	Current spell-charge effect-slot index being processed. [MD:SPELL_CHARGE_EFFECT_SYSTEM.md]
+0x801b9134	BATTLE	GL	g_charge_slot_free_head	Head of active spell-charge effect linked list. [MD:SPELL_CHARGE_EFFECT_SYSTEM.md]
+0x801b9138	BATTLE	GL	g_current_charge_slot_index	Current spell-charge slot index (mirror of g_charge_slot_list_head). [MN]
+0x801b9158	BATTLE	GL	free_effect_list_head	Head of free effect pool. [SD]
+0x801b9258	BATTLE	GL	time_scale_ptr	Pointer to time-scale data (header[0x14]); nibble-packed per-frame values. [SD]
+0x801b9270	BATTLE	GL	particle_pool_head	Particle pool head pointer. [MN]
+0x801bacc8	BATTLE	GL	effect_flags_ptr	Pointer to effect flags section (header[0x18]). [SD]
+0x801bad0c	BATTLE	GL	effect_context_value	Effect context value (EFFECT_CONTEXT_VALUE_ADDR). [SD]
+0x801bade4	BATTLE	GL	line_count	Line particle count (active line primitives this frame). [MD:handler_17_particle_system.md]
+0x801bade8	BATTLE	GL	line_index_array	Line index array base; per-line attribute byte stride 0x8. [MD:handler_17_particle_system.md]
+0x801badec	BATTLE	GL	line_frame_counter	Summon-orb angular velocity per tick (PSX units). [MD:summon_orb_orbital_system.md]
+0x801badf0	BATTLE	GL	line_pos_x	Summon-orb anchor X (caster world X). [MD:summon_orb_orbital_system.md]
+0x801badf2	BATTLE	GL	line_pos_y	Summon-orb anchor Y (caster world Y, -24 = above head). [MD:summon_orb_orbital_system.md]
+0x801badf4	BATTLE	GL	line_pos_z	Summon-orb anchor Z (caster world Z). [MD:summon_orb_orbital_system.md]
+0x801badf8	BATTLE	GL	line_time_scale	Summon-orb master brightness scale (0-240). [MD:summon_orb_orbital_system.md]
+0x801badfe	BATTLE	GL	line_buffer_x	Summon-orb ring-buffer entry Y component. [MD:summon_orb_orbital_system.md]
+0x801bae00	BATTLE	GL	line_buffer_z	Summon-orb ring-buffer entry Z component. [MD:summon_orb_orbital_system.md]
+0x801bbf64	BATTLE	GL	effect_target_unit	Active spell-charge effect target (unit slot index). [MD:SPELL_CHARGE_EFFECT_SYSTEM.md]
+0x801bbf78	BATTLE	GL	sprite_def_table_ptr	Sprite definition table pointer (frames_ptr + 4). [EM]
+0x801bbf7c	BATTLE	GL	effect_anim_tbl_ptr	Effect animation table pointer (curves; anim_table_ptr). [EM]
+0x801bbf80	BATTLE	GL	texture_data_ptr	Effect texture data pointer (from texture section). [MD:TEXTURE_AND_PALETTE_FORMAT.md]
+0x801bbf84	BATTLE	GL	timeline_channel_base	Timeline channel base pointer (timeline_section_ptr + 8). [SD]
+0x801bbf88	BATTLE	GL	effect_data_ptr	Effect particle/data section pointer. [EM]
+0x801bbf8c	BATTLE	GL	animation_table_ptr	Animation curve table pointer (animation_ptr + 4). [EM]
+0x801bbf90	BATTLE	GL	active_effect_list_head	Head of active effect linked list. [SD]
+0x801bc094	BATTLE	GL	script_bytecode_ptr	Script bytecode pointer (effect opcodes). [MD:WRITING_MIPS_CALLBACKS.md]
+0x801bc098	BATTLE	GL	g_current_charge_slot_ptr	Pointer to current EffectState (g_effect_state_ptr). [MD:CUSTOM_EFFECT_HOOKS.md]
+0x801bc0c8	BATTLE	GL	timeline_section_ptr	Timeline section pointer (header[0x1C] + file_base). [SD]
+0x801bc0cc	BATTLE	GL	g_ordering_table_ptr	Pointer to GPU ordering-table base (current frame's OT). [MD:CUSTOM_EFFECT_HOOKS.md]
+0x801bf000	BATTLE	GL	current_texture_page	Current texture page global; used by some rendering paths. [MD:PSX_TPAGE_RESEARCH.md]
+0x801bf00a	BATTLE	GL	anim_state_free_head	AnimState pool free-list head (index of first free slot). [SD]
+0x801bf02c	BATTLE	GL	effect_state_array_base	Base of EffectState array. [SD]
+0x801c00a4	BATTLE	GL	anim_state_pool_base	Base address of AnimState pool. [SD]
+0x801c24c8	BATTLE	GL	effect_phase_state	Effect phase state (current Pattern 1/2 phase). [MN]
+0x801c24d0	BATTLE	GL	current_effect_index	Current effect index being processed. [MN]
+0x801c24d4	BATTLE	GL	child_effect_index	Child effect index (spawned by current effect). [MN]
+0x801c24da	BATTLE	GL	anim_state_alloc_head	AnimState pool alloc-list head (index of first allocated slot). [SD]
+0x801cc074	BATTLE	GL	sprite_buffer_base	Sprite buffer base (sprite VRAM staging region). [MN]
+0x801cc094	BATTLE	GL	sprite_buffer_1	Sprite buffer page 1. [MN]
+0x801cc0b4	BATTLE	GL	sprite_buffer_2	Sprite buffer page 2. [MN]
+0x801cc0d4	BATTLE	GL	sprite_buffer_3	Sprite buffer page 3. [MN]
+0x801cc0f4	BATTLE	GL	sprite_buffer_4	Sprite buffer page 4. [MN]
