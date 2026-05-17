@@ -24,6 +24,7 @@ applied to the Ghidra project; open `tools/` to see *how* it's applied.
 | `renames_high.tsv` + `renames_high_<domain>.tsv` | HIGH-confidence renames (validated). Covers sound system + particle/VFX effect system. |
 | `labels_<binary>.tsv` | Probe-confirmed names + per-row plate/pre comments for one program (e.g. `labels_scus.tsv`). |
 | `comments_<binary>.jsonl` | Free-text plate/pre/post comments (multi-line, JSON-escaped). Currently `comments_scus.jsonl`. |
+| `types_<domain>.h` | C struct/typedef definitions parsed by Ghidra's CParser into the program's data type manager (e.g. `types_particle_emitter.h`). |
 
 See `content/README.md` for the TSV/JSONL schemas and conflict rules,
 and `content/LABELS.md` for the labels TSV in detail.
@@ -40,6 +41,7 @@ and `content/LABELS.md` for the labels TSV in detail.
 | `apply_renames_low.py` / `apply_renames_high.py` | Tier appliers for the rename TSVs (Jython). |
 | `fft_apply_labels.py` | Applier for `labels_<binary>.tsv` (Jython). |
 | `apply_comments.py` | Generic JSONL-driven comments applier (Jython). |
+| `apply_types.py` | C-header importer (Jython, wraps `CParserUtils.parseHeaderFiles`). |
 | `_renames_common.py` | Shared TSV parse / symbol resolution for the rename appliers. |
 | `fix_function_boundaries.py` | One-off helper for `SKIP_MID_INSTR` rows. |
 | `fft_verify_load.py` | Sanity-check that a program loaded at expected addresses. |
@@ -58,6 +60,7 @@ and `content/LABELS.md` for the labels TSV in detail.
 2. **HIGH renames** — `content/renames_high*.tsv`. Emits `OVERRIDE:` log lines.
 3. **Labels** (per binary) — `content/labels_<binary>.tsv` (name + plate/pre cols).
 4. **Comments** (per binary) — `content/comments_<binary>.jsonl`.
+5. **Types** (per binary) — `content/types_<domain>.h` (C struct/typedef defs).
 
 ### `docs/`
 

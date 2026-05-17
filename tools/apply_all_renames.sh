@@ -7,6 +7,7 @@
 #   2. HIGH   renames     — content/renames_high*.tsv  (emits OVERRIDE: vs LOW)
 #   3. labels (per binary) — content/labels_<key>.tsv   (names + plate/pre cols)
 #   4. comments (per binary) — content/comments_<key>.jsonl (plate/pre/post text)
+#   5. types (per binary) — content/types_*.h           (struct/typedef defs, parsed via CParser)
 #
 # Usage:
 #   ./apply_all_renames.sh                # all 14 default programs
@@ -94,6 +95,33 @@ for prog in "${PROGRAMS[@]}"; do
       2>&1 | tee -a "$LOG" \
       | grep -E "applied|SKIP|Summary:|ERROR" || true
   fi
+done
+
+# Tier 5: types (per binary). C header files parsed via Ghidra's CParser
+# and registered in the program's data type manager. Each header is its
+# own analyzeHeadless invocation (CParser state isn't shared).
+for prog in "${PROGRAMS[@]}"; do
+  types_files=()
+  case "$prog" in
+    BATTLE.BIN)
+      types_files=( "$CONTENT_DIR/types_particle_emitter.h" )
+      ;;
+    SCUS_942.21)
+      types_files=()
+      ;;
+    *) continue ;;
+  esac
+  for types_file in "${types_files[@]}"; do
+    [[ -f "$types_file" ]] || continue
+    echo "=== $prog / types: $(basename "$types_file") ===" | tee -a "$LOG"
+    "$ANALYZE" "$GHIDRA_PROJ_DIR" "$GHIDRA_PROJ_NAME" \
+      -process "$prog" \
+      -noanalysis \
+      -scriptPath "$TOOLS_DIR" \
+      -postScript "apply_types.py" "$types_file" \
+      2>&1 | tee -a "$LOG" \
+      | grep -E "DTM delta|PARSE FAILED|ERROR" || true
+  done
 done
 
 echo

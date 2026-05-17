@@ -15,6 +15,7 @@ and the shell wrapper) lives in `../tools/`.
 | `renames_high_<domain>.tsv` | Optional domain add-ons (e.g. `renames_high_sound.tsv`). |
 | `labels_<binary>.tsv` | Probe-confirmed names + plate/pre comments for one program (e.g. `labels_scus.tsv`). See `LABELS.md`. |
 | `comments_<binary>.jsonl` | Plate/pre/post comment bodies, one JSON object per line. Currently `comments_scus.jsonl`. |
+| `types_<domain>.h` | C struct/typedef definitions parsed into the program's data type manager (e.g. `types_particle_emitter.h`). |
 | `run.log` | Latest output of the wrapper. Not committed. |
 
 The Jython appliers (`../tools/apply_renames_{low,high}.py`,
@@ -28,10 +29,11 @@ order. See `../tools/apply_all_renames.sh` for the canonical pipeline.
 2. **HIGH renames** — every `renames_high*.tsv`. Emits `OVERRIDE:` log lines when overriding a LOW name.
 3. **Labels** (per binary) — `labels_<binary>.tsv`. Each file targets one program; cross-binary rows fail silently as `WARN: no code unit`.
 4. **Comments** (per binary) — `comments_<binary>.jsonl`.
+5. **Types** (per binary) — `types_<domain>.h`. Parsed via Ghidra's `CParserUtils.parseHeaderFiles` straight into `currentProgram.getDataTypeManager()`. Idempotent (same definitions on re-parse → no delta).
 
-The label and comment tiers are separate analyzeHeadless invocations
-from the rename tiers, so they don't see prior tiers' state — they
-just last-write-wins by ordering.
+The label, comment, and type tiers are separate analyzeHeadless
+invocations from the rename tiers, so they don't see prior tiers'
+state — they just last-write-wins by ordering.
 
 ## Rename TSV schema
 

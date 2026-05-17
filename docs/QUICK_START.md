@@ -11,9 +11,9 @@
 
 3. **Analyze:** Click "Yes" when prompted, use default options
 
-4. **Import Structure:**
+4. **Import Structure:** *(or just run `tools/apply_all_renames.sh` — types tier handles this automatically)*
    - File → Parse C Source
-   - Select: `ParticleEmitter.h`
+   - Select: `fft-ghidra/content/types_particle_emitter.h`
 
 5. **Navigate to particle code:**
    - Press **G**
