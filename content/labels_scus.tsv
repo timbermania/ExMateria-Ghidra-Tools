@@ -51,16 +51,16 @@ pc	kind	name	pair_status	plate_comment	pre_comment
 0x800157F0	label	vol_prestage_lfo_site	PAIR	-	Per-tick CHAN1_VOL_PRESTAGE set gate (LFO mode 1 active = chan+0xfe==3). probe_vol_prestage_lfo PAIR 1/1.
 
 # === SMD opcode handlers (jumptable @ 0x80028C70) ===
-0x80015874	function	smd_op_rest	PAIR	0x?? Rest opcode.\nProbe: probe_opcode_rest PAIR 1/1.
-0x800158F8	function	smd_op_end_bar	PAIR	0x?? EndBar / barline opcode.\nProbe: probe_opcode_endbar PAIR 2/2.
-0x800159F0	function	smd_op_octave	PAIR	0x?? Octave shift opcode.\nProbe: probe_opcode_octave PAIR 4/4.
-0x80015A28	function	smd_op_lower_octave	PAIR	0x?? Lower-octave opcode.\nProbe: probe_opcode_lower_octave PAIR 7/7.
-0x80015AB8	function	smd_op_repeat	PAIR	0x?? Repeat opcode.\nProbe: probe_opcode_repeat PAIR 3/3.
-0x80015B00	function	smd_op_coda	PAIR	0x?? Coda opcode.\nProbe: probe_opcode_coda PAIR 21/21.
-0x80015E30	function	smd_op_instrument_set	PAIR	0x?? Instrument-select opcode.\nSets channel.instrument_idx → chan+0x8?; populates the audible voice's fine_tune + ADSR registers for the next KON.\nProbe: probe_opcode_instrument PAIR 4/4.
-0x80015EA8	function	smd_op_slur_on	PAIR	0x?? Slur-on opcode (sets channel.flag_word bit 0x800).\nCurrent Ghidra name "smd_flag_0x800" reflected the bit being set; semantic is "slur on".\nProbe: probe_opcode_slur_on PAIR 3/3.
-0x800160E4	function	smd_op_reverb_on	PAIR	0x?? Reverb-on opcode. Sets chan+0x70 routing bit (FFT manages reverb in RAM, NOT via SPU reverb-enable registers).\nProbe: probe_opcode_reverb_on PAIR 2/2.
-0x800161E0	function	smd_op_ca_adsr2_sustain	PAIR	0xCA SustainLevel opcode.\nCurrent Ghidra name "smd_release" was misleading — semantic is "set sustain level via ADSR2 path".\nProbe: probe_opcode_adsr2_sustain PAIR 9/9.
+0x80015874	function	smd_op_rest	PAIR	0x80 Rest opcode.\nProbe: probe_opcode_rest PAIR 1/1.\nSee MUSIC_ITER58 — post-Rest lookahead drives the end-of-note ADSR2-LOW=6 gate.
+0x800158F8	function	smd_op_end_bar	PAIR	0x90 EndBar / barline opcode.\nProbe: probe_opcode_endbar PAIR 2/2.
+0x800159F0	function	smd_op_octave	PAIR	0x94 Octave shift opcode (absolute set).\nProbe: probe_opcode_octave PAIR 4/4.
+0x80015A28	function	smd_op_lower_octave	PAIR	0x96 Lower-octave opcode (octave -1). Jumptable 0x80028B64. NB: pre-fix HIGH described this as opcode 0x97 — jumptable proves 0x96.\nProbe: probe_opcode_lower_octave PAIR 7/7.
+0x80015AB8	function	smd_op_repeat	PAIR	0x98 Repeat opcode.\nProbe: probe_opcode_repeat PAIR 3/3.
+0x80015B00	function	smd_op_coda	PAIR	0x99 Coda opcode.\nProbe: probe_opcode_coda PAIR 21/21.
+0x80015E30	function	smd_op_instrument_set	PAIR	0xAC Instrument-select opcode. Jumptable 0x80028BBC.\nResolves inst from WAVESET via FFT's +1 indexing rule: runtime inst N → WAVESET inst (N+1). Stores to chan+0x30+inst*16+0x30; populates the audible voice's fine_tune + ADSR registers for the next KON. AC writes per-channel state always — audible voice updates slot.* immediately.\nProbe: probe_opcode_instrument PAIR 4/4.
+0x80015EA8	function	smd_op_slur_on	PAIR	0xB0 Slur-on opcode (sets channel.flag_word bit 0x800). Jumptable 0x80028BCC.\nCurrent Ghidra name "smd_flag_0x800" reflected the bit being set; semantic is "slur on".\nProbe: probe_opcode_slur_on PAIR 3/3.
+0x800160E4	function	smd_op_reverb_on	PAIR	0xBA Reverb-on opcode. Jumptable 0x80028BF4. NB: pre-fix HIGH described this as opcode 0xC0 — jumptable proves 0xBA.\nWrites pool+0x70 |= chan+0x34 (per-voice reverb-enable mask, FFT manages reverb in RAM, NOT via SPU reverb-enable registers) AND slot+0x4 |= 0x40 (WALKER_FLAG_ADSR2_HIGH).\nProbe: probe_opcode_reverb_on PAIR 2/2.
+0x800161E0	function	smd_op_c4_adsr2_sustain	PAIR	0xC4 ADSR2 Sustain Bits modifier. Jumptable 0x80028C1C. NB: pre-fix Ghidra called this smd_release/opcode 0xC8; an earlier labels rev mis-tagged it 0xCA. Jumptable proves 0xC4.\nDisasm: lhu v0,0x4(a2); ori v0,v0,0x40; sh v0,0x4(a2); sh v1,0x68(a2). Walker fans out via spu_write_voice_adsr2_high (FUN_8001b9d4) with mode a3 from slot+0x58 (==1→0; ==5→0x200; ==7→0x300; else 0x100).\nProbe: probe_opcode_adsr2_sustain PAIR 9/9.
 0x800162B4	function	smd_op_d0_pitch_bend_init	PAIR	0xD0 PitchBend initial.\nSets channel.pitch_bend to the param.\nProbe: probe_opcode_d0_pitch_bend PAIR 1/1.
 0x800162D8	function	smd_op_d1_pitch_bend_relative	PAIR	0xD1 PitchBend relative.\nAccumulates: channel.pitch_bend += param.\nProbe: probe_opcode_d1_pitch_bend PAIR 21/21.
 0x80016364	label	smd_op_d4_portamento_init_body	PAIR	-	Body of 0xD4 PortamentoInit. pre_pitch_delta_u32 = (s8 rate << 24) / target. probe_opcode_d4_portamento PAIR 1/1. (Function entry is just before this PC; rename containing function to smd_op_d4_portamento_init.)
@@ -68,7 +68,7 @@ pc	kind	name	pair_status	plate_comment	pre_comment
 0x800164D4	function	smd_op_d9_lfo	PAIR	0xD9 LFO (FUN_800164D4 / jumptable 0x80028C70).\nDifferences from 0xD8:\n  - rate sign IS preserved: lo = -rate² for rate<0 (vs 0xD8 always +rate²)\n  - param[2] is bit-decoded: bit 0x10 = mode flag (chan+0xFE = 1 vs 3); low 0x0F = waveform_index → PTR_LAB_80028F54[wf_idx] for chan+0xE0\n  - chan+0xF6 = 0, chan+0xFD = waveform_index\n  - FUN_80016BF8 called with a2 = waveform_index\nProbe: probe_opcode_d9_lfo PAIR 1/1.
 0x800165FC	label	smd_op_db_flag_clear_body	PAIR	-	Body of 0xDB FlagClear. Clears bit 0x1 of chan+0xFE (disables LFO mode 1 sub-slot). probe_opcode_db_flag_clear PAIR 1/1.
 0x80016614	function	smd_op_e0_dynamics	PAIR	0xE0 Dynamics opcode.\nWrites dynamics_byte = read8(a0) to channel state; overrides LFO mode 1 → mode 2 (LAB_800176E4, which bypasses probe_lfo_swap).\nProbe: probe_opcode_dynamics PAIR 4/4.
-0x80016680	function	smd_op_e2_vol_scale	PAIR	0xE2 Expression / Volume-Scale opcode.\nCurrent Ghidra name "smd_expression" is acceptable; the probe calls it vol_scale because it scales the audible-voice volume staging.\nProbe: probe_opcode_e2_vol_scale PAIR 2/2.
+0x80016680	function	smd_op_e2_vol_scale	PAIR	0xE2 Expression / Volume-Scale opcode. Jumptable 0x80028C94.\nThe probe calls it vol_scale because it scales the audible-voice volume staging; HIGH keeps the historical name smd_expression.\nProbe: probe_opcode_e2_vol_scale PAIR 2/2.
 
 # === Pitch LFO callbacks (chan+0x100 fn ptr targets) ===
 0x800175E0	label	lfo_chan_word_1_set_site	-	-	LFO sub-handler that conditionally sets chan_word_1. probe_lfo_chan_word_1_set.

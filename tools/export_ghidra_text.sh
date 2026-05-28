@@ -18,10 +18,20 @@ REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
 }
 GHIDRA_PROJ_DIR="$REPO_ROOT/project-assets"
 GHIDRA_PROJ_NAME="fft-ghidra"
-TOOLS_DIR="$REPO_ROOT/research/tools"
+TOOLS_DIR="$REPO_ROOT/fft-ghidra/tools"
 ANALYZE="${GHIDRA_HOME:-/opt/ghidra}/support/analyzeHeadless"
 # The Python export scripts read FFT_OUT_DIR to decide where to write.
 export FFT_OUT_DIR="$REPO_ROOT/project-assets/fft-rom"
+
+# Map a Ghidra program name to the stem used in the export filenames
+# (e.g. SCUS_942.21 -> scus, BATTLE.BIN -> battle). Matches the rule in
+# ghidra_export_listing.py.
+prog_to_stem() {
+  local n="$1"
+  n="${n%.BIN}"
+  n="${n/_942.21/}"
+  echo "${n,,}"
+}
 
 LISTING_ONLY=0
 PROGRAMS=()
@@ -49,13 +59,22 @@ for prog in "${PROGRAMS[@]}"; do
     | grep -E "export-listing|ERROR" || true
 
   if [[ "$LISTING_ONLY" -eq 0 ]]; then
-    echo "=== $prog: decompilation ===" | tee -a "$LOG"
+    stem="$(prog_to_stem "$prog")"
+    echo "=== $prog: decompilation (stem=$stem) ===" | tee -a "$LOG"
     "$ANALYZE" "$GHIDRA_PROJ_DIR" "$GHIDRA_PROJ_NAME" \
       -process "$prog" -noanalysis -readOnly \
       -scriptPath "$TOOLS_DIR" \
-      -postScript ghidra_export_decompilation.py \
+      -postScript ghidra_full_decompile.py "$FFT_OUT_DIR" "$stem" \
       2>&1 | tee -a "$LOG" \
-      | grep -E "export-decomp|ERROR" || true
+      | grep -E "Wrote|DONE:|ERROR" || true
+    # ghidra_full_decompile.py writes <FFT_OUT_DIR>/<stem>/all_functions.c
+    # plus per-function .c files + manifest.tsv + data_segments.txt.
+    # Mirror the concatenated file to the canonical <stem>_decompilation.c
+    # path expected by docs / callers.
+    if [[ -f "$FFT_OUT_DIR/$stem/all_functions.c" ]]; then
+      cp "$FFT_OUT_DIR/$stem/all_functions.c" "$FFT_OUT_DIR/${stem}_decompilation.c"
+      echo "mirrored $stem/all_functions.c -> ${stem}_decompilation.c" | tee -a "$LOG"
+    fi
   fi
 done
 

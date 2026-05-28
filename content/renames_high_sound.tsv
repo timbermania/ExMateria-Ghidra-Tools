@@ -5,7 +5,10 @@
 # included in the HIGH tier).
 #
 # Confidence basis: function role has been validated against a Godot
-# reimplementation that produces matching audio output.
+# reimplementation (smd-player ExMateria-Sound addon) that produces matching
+# audio output. The opcode → handler-address mapping is taken directly from
+# the SMD opcode jumptable at 0x80028B0C (read out of the SCUS disassembly);
+# each row's opcode-byte annotation is verified against that table.
 #
 # All sound code lives in SCUS_942.21 (0x80010000-0x80066fff), not BATTLE.BIN.
 # This is the boot exec — world-map and menu sounds share the same code path
@@ -23,43 +26,125 @@
 0x80015324	SCUS	FN	smd_interpreter_tick	SMD opcode dispatcher loop entry.
 0x8001749C	SCUS	FN	lfo_handler_tick	Per-tick LFO state-machine entry.
 
-# === SMD opcode handlers (dispatched via jump table at 0x80028B0C) ============
-# Canonical handlers — the SMD/feds format is well-documented and the
-# behavioral mapping has been validated against a Godot reimplementation.
-0x80015874	SCUS	FN	smd_rest	Opcode 0x80 — rest for N ticks (note silence)
-0x8001589C	SCUS	FN	smd_fermata	Opcode 0x81 — extend previous note (fermata)
-0x800158F8	SCUS	FN	smd_end_bar	Opcode 0x90 — end-bar handler.
-0x800159DC	SCUS	FN	smd_loop	Opcode 0x91 — loop from current position
-0x800159F0	SCUS	FN	smd_octave	Opcode 0x94 — octave handler.
-0x80015A10	SCUS	FN	smd_raise_octave	Opcode 0x96 — octave +1
-0x80015A28	SCUS	FN	smd_lower_octave	Opcode 0x97 — octave -1
-0x80015AB8	SCUS	FN	smd_repeat	Opcode 0x98 — repeat from current position N times
-0x80015B00	SCUS	FN	smd_coda	Opcode 0x99 — coda (skip-to marker for D.C. al coda)
-0x80015CB0	SCUS	FN	smd_tempo	Opcode 0xA0 — set tempo (microseconds per tick)
-0x80015DD0	SCUS	FN	smd_instrument	Opcode 0xAC — set instrument (program change)
-0x800160E4	SCUS	FN	smd_reverb_on	Opcode 0xC0 — enable reverb send for channel
-0x80016110	SCUS	FN	smd_reverb_off	Opcode 0xC1 — disable reverb send for channel
-0x800161E0	SCUS	FN	smd_release	Opcode 0xC8 — set release portion of envelope
-0x800162B4	SCUS	FN	smd_set_pitch_bend	Opcode 0xD0 — set absolute pitch bend
-0x800162D8	SCUS	FN	smd_add_pitch_bend	Opcode 0xD1 — add-pitch-bend handler.
-0x80016614	SCUS	FN	smd_dynamics	Opcode 0xE0 — dynamics handler (channel velocity scalar).
-0x80016640	SCUS	FN	smd_dynamics_relative_add	Opcode 0xE1 — relative dynamics add. v = (sb_param << 24) + chan+0x98, clamp positive, store back. Also clears chan+0x6 bit 0x8 (disarms any in-flight expression burst) and sets vol-prestage. Jumptable @0x80028C90.
-0x80016680	SCUS	FN	smd_expression	Opcode 0xE2 — expression handler (timed volume ramp). Computes per-tick delta = ((sb_target<<24) - chan+0x98) / seed, stores in chan+0xa0; seeds chan+0xa8 = seed; sets chan+0x6 bit 0x8 to arm the per-tick ramp. Jumptable @0x80028C94. (Ghidra's pre-fix annotation said 0xE1; the dispatcher arithmetic at PC 0x800154e4 with base 0x80028b0c proves 0xE2.)
-0x80016834	SCUS	FN	smd_volume_scale_set	Opcode 0xE3 — sets a fixed vol-scale divisor. Computes scale = 0x100/(param[0]+1) and stores to chan+0x118 / chan+0x11a. No FFT readers of those fields traced; appears to be parity-shadow state. Jumptable @0x80028C98.
+# === SMD opcode handlers (jumptable @ 0x80028B0C) =============================
+# Each entry validated against smd-player runtime/shared/opcodes/<name>.gd
+# (parity-confirmed) AND cross-checked against the actual jumptable bytes.
+# Opcode bytes are AUTHORITATIVE — derived from PC = 0x80028B0C + (op-0x80)*4.
+# Unhandled opcodes route to the stub LAB_8001586c.
+
+# --- Bytecode flow (0x80, 0x81, 0x90, 0x91, 0x94-0x9A, 0xA0) ---
+0x80015874	SCUS	FN	smd_rest	Opcode 0x80 — rest for N ticks (note silence). KEY-OFF arm on transition. See MUSIC_ITER58: post-Rest lookahead drives end-of-note ADSR2-LOW=6 gate.
+0x8001589C	SCUS	FN	smd_fermata	Opcode 0x81 — extend previous note (fermata).
+0x800158F8	SCUS	FN	smd_end_bar	Opcode 0x90 — end-bar handler (barline marker).
+0x800159DC	SCUS	FN	smd_loop	Opcode 0x91 — loop from current position (save_loop_target in smd-player).
+0x800159F0	SCUS	FN	smd_octave	Opcode 0x94 — absolute octave set.
+0x80015A10	SCUS	FN	smd_raise_octave	Opcode 0x95 — octave +1.
+0x80015A28	SCUS	FN	smd_lower_octave	Opcode 0x96 — octave -1.
+0x80015A40	SCUS	FN	smd_op_97_time_signature	Opcode 0x97 — time-signature set. Stores numerator/denominator at chan+0x38/0x3e. Was Hyp_smd_op_loop_counter_setup in LOW; smd-player parity confirms time-signature role.
+0x80015AB8	SCUS	FN	smd_repeat	Opcode 0x98 — repeat from current position N times.
+0x80015B00	SCUS	FN	smd_coda	Opcode 0x99 — coda (skip-to marker for D.C. al coda).
+0x80015B6C	SCUS	FN	smd_op_9a_repeat_break	Opcode 0x9A — repeat-break (early exit from active repeat loop).
+0x80015CB0	SCUS	FN	smd_tempo	Opcode 0xA0 — set tempo (microseconds per tick).
+
+# --- Instrument / channel byte writers (0xA9, 0xAC, 0xAD) ---
+0x80015DD0	SCUS	FN	smd_op_a9_byte_7a	Opcode 0xA9 — writes operand byte to slot+0x7A (idle-timeout formula selector). Drives L800156D0-DC switch: ==15 → idle=(byte_76+dt)-1; ==16 → idle=byte_76+dt; else → idle=(dt*0x7A)>>4. Previously misnamed smd_instrument in HIGH (wrong address; real instrument-set is 0xAC @ 0x80015E30).
+0x80015E30	SCUS	FN	smd_op_ac_instrument_set	Opcode 0xAC — set instrument (program change). Resolves inst from WAVESET via FFT's +1 indexing: runtime inst N → WAVESET inst (N+1). Stores to chan+0x30+inst*16+0x30.
+0x80015E68	SCUS	FN	smd_op_ad_byte_76	Opcode 0xAD — writes operand byte to chan+0x76 (idle-timeout base, partner to 0xA9's formula selector).
+
+# --- Channel-flag opcodes (0xB0-0xB7) ---
+0x80015EA8	SCUS	FN	smd_op_b0_slur_on	Opcode 0xB0 — sets channel.flag_word bit 0x800 (slur on). Previously LAB_80015EA8.
+0x80015EC0	SCUS	FN	smd_op_b1_slur_off	Opcode 0xB1 — clears channel.flag_word bit 0x800 (slur off).
+0x80015ED8	SCUS	FN	smd_op_b2_fmod_enable	Opcode 0xB2 — frequency-modulation enable. Sets chan+0x2D bit 0 (FM bit fed to SPU FMOD_LO/HI mask via walker). Was Hyp_smd_op_test_ch2d_bit0 in LOW.
+0x80015F18	SCUS	FN	smd_op_b3_fmod_disable	Opcode 0xB3 — frequency-modulation disable. Clears chan+0x2D bit 0.
+0x80015F44	SCUS	FN	smd_op_b4_noise_enable	Opcode 0xB4 — noise-mode enable + arm. Sets chan+0x2D bit 0x2 (SPU NOISE_LO/HI feed).
+0x80015FB4	SCUS	FN	smd_op_b5_adsr1_high_arm	Opcode 0xB5 — ADSR1-high (attack rate+mode) modifier; sets slot+0x4 bit for walker fan-out of attack params.
+0x80016034	SCUS	FN	smd_op_b6_noise_enable_no_arm	Opcode 0xB6 — noise enable without walker arm (state-only).
+0x80016060	SCUS	FN	smd_op_b7_noise_disable	Opcode 0xB7 — noise disable. Clears chan+0x2D bit 0x2.
+
+# --- Reverb routing (0xBA, 0xBB) ---
+0x800160E4	SCUS	FN	smd_reverb_on	Opcode 0xBA — enable reverb send for channel. Writes pool+0x70 |= chan+0x34 (per-voice reverb mask) AND slot+0x4 |= 0x40 (WALKER_FLAG_ADSR2_HIGH). NOTE: earlier HIGH-tier annotation said 0xC0 — jumptable proves 0xBA.
+0x80016110	SCUS	FN	smd_reverb_off	Opcode 0xBB — disable reverb send for channel.
+
+# --- ADSR cluster (0xC0-0xCA) ---
+0x8001613C	SCUS	FN	smd_op_c0_instrument_reload	Opcode 0xC0 — re-load current instrument's WAVESET parameters into channel (refresh ADSR/fine_tune without changing instrument index).
+0x800161A8	SCUS	FN	smd_op_c2_adsr_attack	Opcode 0xC2 — ADSR1 attack-rate modifier. Per-channel write feeding spu_write_voice_adsr1_high at walker time.
+0x800161C4	SCUS	FN	smd_op_c3_adsr_decay_rate	Opcode 0xC3 — ADSR1 decay-rate modifier (music-side dispatch via sequencer table).
+0x800161E0	SCUS	FN	smd_op_c4_adsr2_sustain	Opcode 0xC4 — ADSR2 sustain-bits modifier. `lhu v0,0x4(a2); ori v0,0x40; sh v0,0x4(a2); sh v1,0x68(a2)`. Walker fans out via FUN_8001b9d4(voice, slot+0x64, slot+0x58); a3 mode derives from slot+0x58 (==1→0; ==5→0x200; ==7→0x300; else 0x100). Previously misnamed smd_release in HIGH and smd_op_ca_adsr2_sustain in labels (both opcode-byte annotations wrong; jumptable proves 0xC4).
+0x800161FC	SCUS	FN	smd_op_c5_adsr_release	Opcode 0xC5 — ADSR2 release modifier. `lhu v0,0x4(a2); ori v0,0x80; sh v0,0x4(a2); sh v1,0x2e(a2); sh v1,0x6a(a2)`. Walker fans out via FUN_8001bab8; mode a3 from slot+0x58 (==7 → 0x20 release_mode_exp, else 0).
+0x8001621C	SCUS	FN	smd_op_c6_adsr1_low_nibble	Opcode 0xC6 — writes ADSR1 low nibble (sustain-level). Sets bit 0x100 in slot+0x4 walker flag and stores nibble at chan+0x66.
+0x80016238	SCUS	FN	smd_op_c7_adsr_decay_sustain	Opcode 0xC7 — combined ADSR1 decay-rate + sustain-level modifier (single-write convenience opcode).
+0x80016260	SCUS	FN	smd_op_c8_adsr_attack_mode	Opcode 0xC8 — ADSR1 attack-mode (linear vs exponential, bit 15 of SPU+0x08).
+0x8001627C	SCUS	FN	smd_op_c9_adsr_mode_c9	Opcode 0xC9 — sets slot+0x58 = 5 (selects ADSR2 sustain mode-bits a3=0x200 in walker fan-out).
+0x80016298	SCUS	FN	smd_op_ca_adsr_mode_ca	Opcode 0xCA — sets slot+0x58 = 7 (selects ADSR2 sustain mode-bits a3=0x300 + release_mode_exp via 0xC5 path).
+
+# --- Pitch bend / portamento / pitch-LFO (0xD0-0xDC) ---
+0x800162B4	SCUS	FN	smd_set_pitch_bend	Opcode 0xD0 — set absolute pitch bend (channel.pitch_bend = param).
+0x800162D8	SCUS	FN	smd_add_pitch_bend	Opcode 0xD1 — add pitch bend (channel.pitch_bend += param, 8-bit param).
+0x80016304	SCUS	FN	smd_op_d2_pitch_bend_rel	Opcode 0xD2 — relative pitch bend (signed 8-bit delta accumulated into channel.pitch_bend). Distinct from 0xD1 by sign semantics.
+0x80016330	SCUS	FN	smd_op_d3_pitch_bend_add_16bit	Opcode 0xD3 — add 16-bit pitch-bend delta (two-byte param).
+0x80016364	SCUS	FN	smd_op_d4_portamento_init	Opcode 0xD4 — portamento init. pre_pitch_delta_u32 = (s8 rate << 24) / target_ticks. Pre-fix annotation: function entry at 0x80016364; labels' smd_op_d4_portamento_init_body labels the inner body.
+0x800163BC	SCUS	FN	smd_op_d5_chan6_bit2_toggle	Opcode 0xD5 — toggles chan+0x6 bit 0x2 (per-channel state flag — gates downstream expression/ramp ).
+0x800163D4	SCUS	FN	smd_op_dc_porta_stop	Opcode 0xDC — portamento stop. Cancels active portamento sweep (clears chan+0x6 portamento bit + zeroes accumulator).
+0x800163EC	SCUS	FN	smd_op_d6_detune	Opcode 0xD6 — detune (signed 8-bit fine-tune offset accumulated into chan+0x88 or fine-tune field).
+0x80016420	SCUS	FN	smd_op_d8_pitch_lfo_init	Opcode 0xD8 — pitch-LFO init. channel.lfo_step_base = rate² << 14 (UNDIVIDED); channel.lfo_period_reload = param[0]; chan+0xFE = 3 (mode 1, alternating-swap callback @ LAB_80017690). See MUSIC_ITER21 for the divide-fix history (Godot mistakenly divided).
+0x800164D4	SCUS	FN	smd_op_d9_lfo	Opcode 0xD9 — pitch-LFO init (mode-flag variant). Differs from 0xD8: rate sign preserved (lo = -rate² for rate<0); param[2] bit 0x10 = mode flag (chan+0xFE=1 vs 3); low nibble = waveform_index → PTR_LAB_80028F54[wf_idx] for chan+0xE0.
+0x800165AC	SCUS	FN	smd_op_d7_pitch_lfo_depth	Opcode 0xD7 — pitch-LFO depth set. Writes 0x100/(param+1) to ch+0xF8.
+0x800165E4	SCUS	FN	smd_op_da_flag_set	Opcode 0xDA — sets bit 0 of chan+0xFE (sub-slot 0 active flag).
+0x800165FC	SCUS	FN	smd_op_db_flag_clear	Opcode 0xDB — clears bit 0 of chan+0xFE.
+
+# --- Dynamics / pan / volume-LFO (0xE0-0xE8) ---
+0x80016614	SCUS	FN	smd_dynamics	Opcode 0xE0 — set channel velocity scalar (overrides LFO mode 1 → mode 2, switching pitch-LFO callback from LAB_80017690 to LAB_800176E4).
+0x80016640	SCUS	FN	smd_dynamics_relative_add	Opcode 0xE1 — relative dynamics add. v = (sb_param << 24) + chan+0x98, clamp positive, store back. Also clears chan+0x6 bit 0x8 (disarms expression burst) and sets vol-prestage.
+0x80016680	SCUS	FN	smd_expression	Opcode 0xE2 — expression / timed volume ramp. Per-tick delta = ((sb_target<<24) - chan+0x98) / seed → chan+0xa0; seeds chan+0xa8 = seed; sets chan+0x6 bit 0x8 to arm.
+0x80016834	SCUS	FN	smd_op_e3_vol_lfo_depth	Opcode 0xE3 — volume-LFO depth set. depth = 256/(param+1), stored to chan+0x118 and chan+0x11A. Sister of 0xD7 (pitch) and 0xEB (pan). Affects 16 effect-sound SFX (Bolt3/4, Demi, Silence, Shiva, Odin, etc.). Previously misnamed smd_volume_scale_set in HIGH — name was an early guess from arithmetic shape; the field is the vol-LFO depth.
+0x800166C8	SCUS	FN	smd_op_e4_arm_subslot1_pitch_lfo	Opcode 0xE4 — arm LFO sub-slot 1 with pitch-LFO callback. Companion to 0xE5/0xE6/0xE7.
+0x8001676C	SCUS	FN	smd_op_e5_3param	Opcode 0xE5 — three-param sub-slot 1 setup (callback_idx, inner_reload, outer-delay reload). Mirror of 0xEC but for sub-slot 1 (chan+0x100..0x11F block).
+0x8001686C	SCUS	FN	smd_op_e6_set_subslot1_active	Opcode 0xE6 — sets bit 0 of chan+0x11E (sub-slot 1 active flag).
+0x80016884	SCUS	FN	smd_op_e7_clear_subslot1_active	Opcode 0xE7 — clears bit 0 of chan+0x11E.
+0x8001689C	SCUS	FN	smd_op_e8_pan	Opcode 0xE8 — set pan. Signed 8-bit param → chan+0x8A. See MUSIC_OPCODE_E8_FIELD_MISMATCH for the cross-package field-naming convention; native cores must use the same offset.
+
+# --- Pan-LFO + sub-slot 2 cluster (0xEB-0xED, 0xEF) ---
+0x8001693C	SCUS	FN	smd_op_eb_pan_lfo_depth	Opcode 0xEB — pan-LFO depth set. Sister of 0xD7/0xE3 — depth = 256/(param+1) into sub-slot 2's depth field.
+0x80016974	SCUS	FN	smd_op_ec_lfo_arm_subslot2	Opcode 0xEC — arm LFO sub-slot 2 (chan+0x120..0x13F block) with mode 2 (pan-LFO) and HARDCODED callback_idx=3 (pitch_accum_callback / triangle). 3 params: p0=inner_reload (sub+0x12), p1=step base, p2=outer-delay reload. Sub+0x1A=0x100 (depth_reload, FIXED); sub+0x1C=2 (mode); sub+0x1D=3 (callback_idx); sub+0x1E=3 (active_dir bits 0x1+0x2). Sibling: FUN_80016A14 (0xED) same but callback_idx from (p2 & 0xF).
+0x80016A14	SCUS	FN	smd_op_ed_pan_lfo	Opcode 0xED — mirror of 0xEC arming sub-slot 2, mode 2 (pan-LFO), but with callback_idx from param[2]&0xF (not hardcoded). PC 0x80016AA0 writes mode=2 to sub+0x13C; PC 0x80016AAC writes callback vtable ptr to sub+0x120. Early-returns at 0x80016A40 (param[1]==0) and 0x80016A4C (param[0]==0).
+0x80016AF0	SCUS	FN	smd_op_ef_clear_subslot2	Opcode 0xEF — disarm LFO sub-slot 2. `lhu v0,0x13e(a2); andi v0,0xfffe; sh v0,0x13e(a2)` — clears bit 0x1 of sub+0x1E.
+
+# --- Generic sub-slot multiplexers (0xF0-0xF2, 0xF6, 0xF7) ---
+# These are sub-slot-index-parameterized (param picks which of the 3
+# sub-slots to mutate) — they handle generic state writes for sub-slot
+# 0/1/2 in one body instead of having three separate opcodes per role.
+0x80016B08	SCUS	FN	smd_op_f0_lfo_subslot_select	Opcode 0xF0 — sub-slot select / pointer setup. Param picks which sub-slot block (chan+0xE0/0x100/0x120) subsequent ops act on.
+0x80016B80	SCUS	FN	smd_op_f1_lfo_subslot_update	Opcode 0xF1 — sub-slot state update (multi-field write to the selected sub-slot block).
+0x80016C70	SCUS	FN	smd_op_f2_lfo_subslot_dyn_depth	Opcode 0xF2 — dynamic LFO depth update for the selected sub-slot.
+0x80016D64	SCUS	FN	smd_op_f6_lfo_subslot_activate	Opcode 0xF6 — activate the selected sub-slot (sets active flag, arms walker fan-out).
+0x80016DEC	SCUS	FN	smd_op_f7_lfo_subslot_dyn_disable	Opcode 0xF7 — dynamic disable of the selected sub-slot (clears active flag without zeroing state).
 
 # === SPU hardware-register writers (walker helpers) ===========================
 # Validated as the SPU register-writer family invoked by async_commit_walker.
-0x8001B428	SCUS	FN	spu_write_voice_volume_no_sweep	Walker helper: vol_L + vol_R registers, sweep disabled
-0x8001B4B0	SCUS	FN	spu_write_voice_volume_sweep	Walker helper: vol_L + vol_R registers with hardware sweep
-0x8001B628	SCUS	FN	spu_write_voice_pitch	Walker helper: SPU voice pitch register
-0x8001B6A4	SCUS	FN	spu_write_voice_start_addr	Walker helper: SPU ADPCM start address register
-0x8001B720	SCUS	FN	spu_write_voice_repeat_addr	Walker helper: SPU ADPCM repeat (loop) address register
+0x8001B428	SCUS	FN	spu_write_voice_volume_no_sweep	Walker helper: vol_L + vol_R registers, sweep disabled. SPU+0x00, SPU+0x02.
+0x8001B4B0	SCUS	FN	spu_write_voice_volume_sweep	Walker helper: vol_L + vol_R registers with hardware sweep (sweep-mode bits encode rate/direction).
+0x8001B628	SCUS	FN	spu_write_voice_pitch	Walker helper: SPU voice pitch register (SPU+0x04, one u16, no sweep, no RMW).
+0x8001B6A4	SCUS	FN	spu_write_voice_start_addr	Walker helper: SPU ADPCM start-address register (SPU+0x06).
+0x8001B720	SCUS	FN	spu_write_voice_repeat_addr	Walker helper: SPU ADPCM repeat (loop) address register (SPU+0x0E). May point into a different instrument's ADPCM region (FFT loops sustained tones into shared cross-instrument data).
+0x8001B79C	SCUS	FN	spu_write_voice_adsr1_mid	Walker helper: ADSR1 mid-nibble RMW (SPU+0x08 bits 4-7 = decay rate, 0-3 = sustain level). Was LOW; promoted via parity validation.
+0x8001B8B0	SCUS	FN	spu_write_voice_adsr1_low	Walker helper: ADSR1 low-nibble RMW — writes only sustain-level nibble (SPU+0x08 bits 0-3). Called by 0xC6 path.
+0x8001B938	SCUS	FN	spu_write_voice_adsr1_high	Walker helper: ADSR1 high — attack rate (SPU+0x08 bits 8-14) + attack mode bit 15 (0=linear/1=exp). Was LOW; promoted.
+0x8001B9D4	SCUS	FN	spu_write_voice_adsr2_high	Walker helper: ADSR2 high-bits writer (SPU+0x0A bits 6-15 = sustain rate + mode + step). Called by 0xC4 path.
+0x8001BAB8	SCUS	FN	spu_write_voice_adsr2_low	Walker helper: ADSR2 low-bits writer (SPU+0x0A bits 0-5 = release rate + release mode bit 5). Called by 0xC5 path. Was LOW; promoted.
 
 # === Pitch lookup tables (effect-sound-parity v2) =============================
 0x80028FE8	SCUS	GL	OCTAVE_SHIFT_LOOKUP	Pitch lookup: octave shifts (128 bytes u8). See comments_scus.jsonl for layout.
 0x80029060	SCUS	GL	SEMITONE_LOOKUP	Pitch lookup: semitone offsets (128 bytes u8). See comments_scus.jsonl for layout.
 0x800290D8	SCUS	GL	PITCH_LOOKUP_TABLE	Pitch lookup table base (12288 u16 entries). Overrides LOW pitch_lookup_table_base.
 
-# === SMD opcode handlers — LFO sub-slot 2 (effect-sound-parity v2) ============
-0x80016974	SCUS	FN	op_ec_lfo_arm_subslot2	SMD opcode 0xEC handler: arm LFO sub-slot 2 (mode 2, pan-LFO).
-0x80016AF0	SCUS	FN	op_ef_clear_subslot2	SMD opcode 0xEF handler: disarm LFO sub-slot 2 (clear bit 0x1 of chan+0x13E).
+# === SMD opcode dispatch table + data tables ==================================
+0x80028B0C	SCUS	GL	smd_opcode_jumptable	128-entry jumptable for control opcodes 0x80-0xFF (4 bytes each). Indexed at PC 0x800154E4 (lw v0, smd_opcode_jumptable[(op-0x80)*4]; jalr v0). Unhandled opcodes route to LAB_8001586c stub.
+0x80028D0C	SCUS	GL	smd_opcode_arg_size_table	Per-opcode argument-size lookup (128 bytes; one byte per opcode 0x80-0xFF). Promoted from LOW.
+0x80028D8C	SCUS	GL	smd_note_duration_table	256-byte: SMD note byte → tick count (0 means read explicit duration byte from stream).
+0x80028E70	SCUS	GL	smd_bmidi_key_offset_table	256-byte: SMD note byte → bmidi key offset (added to chan+0x7C baseline).
+
+# === Pitch-LFO mode callbacks (slot+0x100 fn-ptr targets) =====================
+# Not in the manifest as function entries (Ghidra has them as LAB_*)
+# but they ARE callable functions. Force-functionize.
+0x80017690	SCUS	FN	pitch_lfo_callback_mode1_swap	Pitch-LFO mode-1 callback (alternating swap). Installed by smd_op_d8_pitch_lfo_init and (with chan+0xFE=3) smd_op_d9_lfo. Per IRQ pulse: decrement chan+0xF4 countdown; on 0 → swap step sign and store to chan+0x88 (pitch_bend). Inner sw a1,0x4(a0) at 0x800176CC is the probe site (probe_lfo_swap PAIR 36/36).
+0x800176E4	SCUS	FN	pitch_lfo_callback_mode2	Pitch-LFO mode-2 callback. Installed by smd_op_e0_dynamics override (chan+0xFE=1; also reachable from mode-2 D9 path). Bypasses the swap at 0x800176CC — probe_lfo_swap does NOT fire while this callback is active.

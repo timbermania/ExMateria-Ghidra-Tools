@@ -1,4 +1,6 @@
 # -*- coding: utf-8 -*-
+# @category FFT.Export
+# @runtime Jython
 # ghidra_full_decompile.py
 # Ghidra Jython postScript that decompiles every function in currentProgram
 # and emits a structured dump on disk:
@@ -26,6 +28,7 @@ from ghidra.app.decompiler import DecompInterface, DecompileOptions
 from ghidra.util.task import ConsoleTaskMonitor
 from ghidra.program.model.symbol import SymbolType, SourceType
 
+import codecs
 import os
 import re
 
@@ -181,7 +184,7 @@ for i, func in enumerate(all_funcs):
         body = "\n".join(header) + "/* FAILED to decompile: %s */\n" % err
         fail += 1
 
-    f_out = open(fn_path, "w")
+    f_out = codecs.open(fn_path, "w", encoding="utf-8")
     try:
         f_out.write(body)
     finally:
@@ -201,7 +204,7 @@ decomp.dispose()
 # -----------------------------------------------------------------------------
 
 all_path = os.path.join(prog_dir, "all_functions.c")
-f_out = open(all_path, "w")
+f_out = codecs.open(all_path, "w", encoding="utf-8")
 try:
     f_out.write("\n".join(all_lines))
 finally:
