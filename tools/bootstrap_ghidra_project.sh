@@ -17,7 +17,12 @@
 # Imports both with processor MIPS:LE:32:default. SCUS has a 0x800-byte
 # PS-X EXE header that's skipped via -loader-fileOffset. Base addresses:
 #   SCUS_942.21   →  0x80010000  (after 0x800 header)
-#   BATTLE.BIN    →  0x80067800  (overlay, raw)
+#   BATTLE.BIN    →  0x80067000  (overlay, raw — verified live in pcsx-redux
+#                                  2026-06-20: every file byte X appears at
+#                                  RAM 0x80067000+X. Prior 0x80067800 base
+#                                  was off-by-0x800 and required the
+#                                  fix_battle_bin_disassembly.sh secondary
+#                                  block as a partial workaround.)
 
 set -euo pipefail
 
@@ -59,11 +64,11 @@ echo "    BATTLE: $BATTLE"
   -loader-blockName scus \
   -processor "MIPS:LE:32:default"
 
-# 2. BATTLE.BIN (raw overlay, loads at 0x80067800)
+# 2. BATTLE.BIN (raw overlay, loads at 0x80067000)
 "$ANALYZE" "$PROJ_DIR" "$PROJ_NAME" \
   -import "$BATTLE" \
   -loader BinaryLoader \
-  -loader-baseAddr 0x80067800 \
+  -loader-baseAddr 0x80067000 \
   -loader-blockName battle \
   -processor "MIPS:LE:32:default"
 

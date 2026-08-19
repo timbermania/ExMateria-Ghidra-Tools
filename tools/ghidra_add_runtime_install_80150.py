@@ -22,7 +22,7 @@
 #   echo -e "y\ny" | /opt/ghidra/support/pyghidraRun -H \
 #       project-assets fft-ghidra \
 #       -process "BATTLE.BIN" \
-#       -scriptPath research/tools \
+#       -scriptPath fft-ghidra/tools \
 #       -postScript ghidra_add_runtime_install_80150.py
 #
 # Looks for the dump file at:

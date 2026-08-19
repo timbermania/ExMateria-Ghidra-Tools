@@ -148,3 +148,11 @@
 # but they ARE callable functions. Force-functionize.
 0x80017690	SCUS	FN	pitch_lfo_callback_mode1_swap	Pitch-LFO mode-1 callback (alternating swap). Installed by smd_op_d8_pitch_lfo_init and (with chan+0xFE=3) smd_op_d9_lfo. Per IRQ pulse: decrement chan+0xF4 countdown; on 0 → swap step sign and store to chan+0x88 (pitch_bend). Inner sw a1,0x4(a0) at 0x800176CC is the probe site (probe_lfo_swap PAIR 36/36).
 0x800176E4	SCUS	FN	pitch_lfo_callback_mode2	Pitch-LFO mode-2 callback. Installed by smd_op_e0_dynamics override (chan+0xFE=1; also reachable from mode-2 D9 path). Bypasses the swap at 0x800176CC — probe_lfo_swap does NOT fire while this callback is active.
+
+# --- Basic-attack melee SFX (PCSX-verified 2026-06-11; keyed by equipped weapon graphic) ---
+0x80082620	BATTLE	FN	melee_attack_sfx_dispatch	Basic-attack SFX dispatcher. a0=action ctx, a1=phase; reads equipped weapon graphic at ctx+0x1ab -> weapon_graphic_soundclass_table; phase 0 plays swing, phase 1 plays hit/block by action-entry type (ctx+0x18e). PCSX-verified 2026-06-11: ninja dagger g1/knife g2 -> class1, rune blade g0x13 -> class3.
+0x8005a884	SCUS	FN	weapon_graphic_soundclass_ptr	Returns &weapon_graphic_soundclass_table + graphic*0xC (pure index: g*2+g<<2). Used by melee_attack_sfx_dispatch to fetch a weapon's sound class.
+0x80062eb8	SCUS	GL	weapon_graphic_soundclass_table	Per-weapon-graphic metadata, stride 0xC; byte +5 = melee sound class. Indexed by equipped weapon `graphic` id (items.json graphic). Maps weapon families -> ~10 sound classes.
+0x80093d40	BATTLE	GL	attack_swing_sfx_by_class	Phase-0 swing/windup SFX id per sound class (32 bytes). Played by melee_attack_sfx_dispatch phase 0.
+0x80093d60	BATTLE	GL	attack_hit_sfx_by_class	Phase-1 impact/hit SFX id per sound class (32 bytes). Played for hit action-entry types (cases 9/c).
+0x80093d80	BATTLE	GL	attack_block_sfx_by_class	Phase-1 block/alt SFX id per sound class (32 bytes). Played for block action-entry types (cases 2/3/a).

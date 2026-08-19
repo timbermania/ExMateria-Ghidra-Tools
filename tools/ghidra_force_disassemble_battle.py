@@ -11,7 +11,7 @@
 # Usage (headless):
 #   analyzeHeadless <project_dir> fft-ghidra \
 #       -process "BATTLE.BIN" \
-#       -scriptPath research/tools \
+#       -scriptPath fft-ghidra/tools \
 #       -postScript ghidra_force_disassemble_battle.py
 #
 # Or run from Ghidra's Script Manager (CodeBrowser open on BATTLE.BIN).
@@ -35,6 +35,16 @@ monitor = ConsoleTaskMonitor()
 # Byte ranges Ghidra failed to disassemble. Source: grep raw-byte rows in
 # battle_disassembly.txt for 0x801A9000..0x801AC000 and merge contiguous.
 RANGES = [
+    # Vitals-readout (HP/MP/CT bars) draw page. The whole 0x80135xxx page was
+    # left as ?? raw data by the auto-analyzer, hiding the bar renderer
+    # FUN_801352bc @ 0x801352BC (reached via jal from 0x8013608C/0x80135A98).
+    # Recovered live (capstone) in the 2026-06-19 vitals-bar RE pass; see
+    # godot-learning/docs/vitals-bar-investigation.md. Force-D the page so the
+    # function lands in battle_disassembly.txt + gets a CreateFunction in the
+    # auto-analysis re-run below (so it's statically citable, not ?? bytes).
+    # Seed at the verified function entry (clean prologue addiu sp,-0x118) and
+    # bound generously; DisassembleCommand(follow_flow=True) walks the function.
+    (0x801352BC, 0x80135E00),
     (0x801A9098, 0x801A90AC),
     (0x801A9214, 0x801A926C),
     (0x801A93B0, 0x801A93B8),

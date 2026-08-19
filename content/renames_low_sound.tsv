@@ -86,3 +86,8 @@
 0x800154EC	SCUS	GL	smd_dispatcher_handler_call	jalr v0 — call control-opcode handler
 0x80015504	SCUS	GL	smd_dispatcher_post_handler_check	Convergence after note OR control path; loop or exit on bits 0x500
 0x80015518	SCUS	GL	smd_dispatcher_save_stream_exit	Save stream pointer to chan+0x16 then exit inner loop
+
+# --- Ranged bow/crossbow charge/projectile SFX (located statically; audible output not yet confirmed) ---
+0x800689a4	BATTLE	FN	ranged_charge_sfx_select	Hyp: ranged/charge SFX selector. anim(ctx+0x138) overrides (0x94->6, 0x170..0x189->0x10), else bow_crossbow_charge_sfx_table[weapon_type ctx+0x13b] -> charge_slot_sfx_trigger. Fires for ranged action entry types.
+0x801ade7c	BATTLE	FN	charge_slot_sfx_trigger	Hyp: spatial projectile SFX. Allocs a 0x54-stride charge slot, stamps projectile x/y/z (from a1+0xa4..0xac), looks up SPU descriptor DAT_801b84dc[idx*4]. Drives the bow/crossbow projectile sound.
+0x800943c4	BATTLE	GL	bow_crossbow_charge_sfx_table	Hyp: weapon_type-indexed charge SFX selector (32 bytes). Nonzero ONLY for Bow (type 12 -> 0x01) and Crossbow (type 11 -> 0x03); read by ranged_charge_sfx_select. (Gun is 0 here -> gunshot uses a different path.)

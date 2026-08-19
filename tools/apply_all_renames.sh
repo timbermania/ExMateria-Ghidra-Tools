@@ -83,6 +83,7 @@ for prog in "${PROGRAMS[@]}"; do
   case "$prog" in
     SCUS_942.21)  comments_file="$CONTENT_DIR/comments_scus.jsonl" ;;
     BATTLE.BIN)   comments_file="$CONTENT_DIR/comments_battle_bin.jsonl" ;;
+    WORLD.BIN)    comments_file="$CONTENT_DIR/comments_world_bin.jsonl" ;;
     *)            continue ;;
   esac
   if [[ -f "$comments_file" ]]; then

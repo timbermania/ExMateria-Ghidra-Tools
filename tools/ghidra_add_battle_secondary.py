@@ -21,11 +21,11 @@
 #   echo -e "y\ny" | /opt/ghidra/support/pyghidraRun -H \
 #       project-assets fft-ghidra \
 #       -process "BATTLE.BIN" \
-#       -scriptPath research/tools \
+#       -scriptPath fft-ghidra/tools \
 #       -postScript ghidra_add_battle_secondary.py
 #
 # Then re-export disassembly:
-#   echo -e "y\ny" | ./research/tools/export_ghidra_text.sh --listing-only BATTLE.BIN
+#   echo -e "y\ny" | ./fft-ghidra/tools/export_ghidra_text.sh --listing-only BATTLE.BIN
 
 from ghidra.program.model.address import AddressSet
 from ghidra.app.cmd.disassemble import DisassembleCommand

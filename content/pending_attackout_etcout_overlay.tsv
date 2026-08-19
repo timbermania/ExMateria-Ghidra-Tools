@@ -1,0 +1,25 @@
+# pending_attackout_etcout_overlay.tsv — NOT auto-loaded (name intentionally
+# does not match the renames_high*.tsv / renames_low*.tsv glob).
+#
+# These addresses live in the ATTACK.OUT / ETC.OUT runtime OVERLAY region
+# (~0x801BF000+). They CANNOT be applied by the current pipeline because:
+#   1. ATTACK.OUT / ETC.OUT are not imported into the fft-ghidra project.
+#   2. The applier's toAddr() only targets a program's DEFAULT ram: space,
+#      not an overlay address space.
+# Applying against BATTLE's base image would SKIP_NOT_CODE (functions) or
+# mislabel meaningless bytes (globals).
+#
+# TO ENABLE: import ATTACK.OUT/ETC.OUT as overlay blocks (see
+# ghidra_add_battle_secondary.py for the createInitializedBlock(overlay=True)
+# pattern), teach the applier a per-row overlay-space column, then move rows
+# back into renames_high_scenario.tsv.
+# Format: address<TAB>binary<TAB>type<TAB>name<TAB>description
+0x801c05d4	BATTLE	FN	etcout_show_graphic_worker_entry	{7D} Show Graphic render-worker entry (ETC.OUT overlay, file off 0x15D4). Branches on per-id format (0=CHAPTER anim loop 0x801c017c, 1=END still, 2=movie). Byte-matches ETC.OUT file 0x15D4. (ATTACK.OUT/ETC.OUT overlay) [VERIFIED: overlay signature byte-match, scenario 8] [MD:show_graphic_op7d_decode.md]
+0x801bf3e0	BATTLE	FN	etcout_show_graphic_fmt0_builder	{7D} fmt-0 (CHAPTER/GAMEOVER) primitive builder (ETC.OUT overlay, file off 0x3E0). POLY_GT4 gouraud-textured semi-transparent quads, tpage (fmt&3)<<7|0x26 (abr1 additive text) + 0x46 (abr2 subtractive drop-shadow), clut 0x0FDB (VRAM 432,63), grey 0x80, soft-edge 32px. (overlay) [VERIFIED: GPU packet read live @0x801c0bdc, scenario 8] [MD:show_graphic_op7d_decode.md]
+0x801c017c	BATTLE	FN	etcout_show_graphic_fmt0_anim_loop	{7D} fmt-0 CHAPTER animation loop (ETC.OUT overlay, file off 0x017C). Per-vblank tick; grow-limit 248, hold 80, fade 128 grey ramp 128->0. (overlay) [VERIFIED live: phase counts ~240/85/127 frames, scenario 8] [MD:show_graphic_op7d_decode.md]
+0x801c08a8	BATTLE	GL	etcout_show_graphic_descriptor_table	{7D} per-id descriptor table (ETC.OUT overlay, file off 0x18A8). Stride 0x20, 13 rows; +0x00 RECT*, +0x04 template*, +0x10 format, +0x14 filename*, +0x18 disc-LBA, +0x1C size. Row = operand-1. (overlay) [VERIFIED: raw-byte parse + operand 1->chapter1.bin, scenario 8] [MD:show_graphic_op7d_decode.md]
+0x801c9ec0	BATTLE	FN	attackout_map_title_worker_entry	{91} Show Map Title render-worker entry (ATTACK.OUT overlay, file off 0xAEC0). Uploads 256x20 4bpp title strip (rect 448,224,64,20 from MAPTITLE.BIN, strip=event var 0x33) + 16-entry grey CLUT (rect 448,255,16,1 from ATTACK.OUT 0x16FF0). (overlay) [VERIFIED live: byte-match strip 23 5120/5120, scenario 8] [MD:show_map_title_op91_decode.md]
+0x801c9d68	BATTLE	FN	attackout_map_title_task_body	{91} Show Map Title task body (ATTACK.OUT overlay, file off 0xAD68). Drives reveal (L->R wipe grow-limit 248) -> hold 110 -> erase (2nd L->R wipe limit 249); strip index from event var 0x33. (overlay) [VERIFIED live: reveal/erase captured s1..s4, scenario 8] [MD:show_map_title_op91_decode.md]
+0x801ca664	BATTLE	FN	darkscreen_mosaic_overlay	Demand-loaded overlay: rotating-diamond mosaic + deploy/conditions menu; reads task slot 0x80174038, stashes 0x80173fe0, timing-gate 0x8013b590(0x27). (ATTACK.OUT overlay) [live D7: word flips ~2 frames in] [MD:DARKSCREEN_OPCODE_76_INVESTIGATION.md]
+0x801c3ab0	BATTLE	FN	darkscreen_vram_save_restore	Overlay sub-fn: framebuffer StoreImage/LoadImage save-restore + GsLoadImage conditions-box texture upload. (ATTACK.OUT overlay) [static from overlay dump] [MD:DARKSCREEN_OPCODE_76_INVESTIGATION.md]
+0x801d8000	BATTLE	GL	darkscreen_polyf4_pool	Live POLY_F4 packet pool mid-effect: 576 diamond quads, word0=0x2A102830 (POLY_F4 semi-transparent, RGB 48,40,16). [byte-proven from 48KB live slice] [MD:DARKSCREEN_OPCODE_76_INVESTIGATION.md]

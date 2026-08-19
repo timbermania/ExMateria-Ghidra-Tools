@@ -15,7 +15,8 @@ af = prog.getAddressFactory()
 
 LANDMARKS = {
     "SCUS_942.21": (0x80010000, "00 70 06 80"),  # main exec start, undefined4 0x80067000
-    "BATTLE.BIN":  (0x801A634C, "00 58 04 34"),  # particle spawn fn entry: ori a0,zero,0x5800
+    "BATTLE.BIN":  (0x801A5B4C, "00 58 04 34"),  # particle spawn fn entry: ori a0,zero,0x5800
+                                                  # (file offset 0x13EB4C at base 0x80067000)
 }
 
 addr_int = None

@@ -21,7 +21,7 @@
 #       -readOnly -noanalysis
 #
 # Args:
-#   args[0] -- output root directory (absolute, Windows-style ok)
+#   args[0] -- output root directory (absolute path)
 #   args[1] -- subdirectory name to use under output_root (e.g. "BATTLE_BIN", "SCUS")
 
 from ghidra.app.decompiler import DecompInterface, DecompileOptions

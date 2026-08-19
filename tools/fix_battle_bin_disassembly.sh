@@ -3,25 +3,34 @@
 # post-import fixes to make the disassembly reflect the actual
 # runtime memory layout.
 #
-# Discovered issues (see CADENCE_DRIFT_SPAWN_DELAY.md and commits
-# d31fa1f4, 30506350):
-# - BATTLE.BIN has TWO load segments. Ghidra's default import puts
-#   everything at base 0x80067800, but the file's tail (offset
-#   0x142800..0x155168) actually loads at RAM 0x801A9800+ (base
-#   0x80067000). At runtime, RAM 0x801AA000..0x801AA7FF has the
-#   secondary content (overlays the primary).
-# - Ghidra's auto-analyzer left many ranges in the primary as `??`
-#   data instead of disassembling them. Most are real code.
+# As of 2026-06-20, bootstrap_ghidra_project.sh imports BATTLE.BIN at the
+# CORRECT base 0x80067000 (live-verified). The "two segments" theory
+# below was a misdiagnosis of the off-by-0x800 bootstrap base; with the
+# primary block now correct, steps 2-3 (BATTLE_SECONDARY overlay) are
+# redundant but harmless — they remap the same data at the same RAM
+# address. Step 1 (force-disassemble data-as-code in the primary block)
+# is still useful. Plan to retire the secondary-block steps in a future
+# cleanup pass.
+#
+# Historical (kept for context):
+# - Ghidra's old default import put everything at base 0x80067800, off
+#   from live RAM by 0x800.
+# - The "secondary block at RAM 0x801A9800 from file offset 0x142800"
+#   was a partial fix: by coincidence,
+#       0x80067000 + 0x142800 = 0x801A9800
+#   so the secondary block had the correct base for that file region.
+#   With primary now at 0x80067000, the same equation holds and the
+#   block overlays the existing primary mapping cleanly.
 #
 # This script applies the fixes via headless Ghidra:
 #   1. Force-disassemble the 34 known data ranges in the primary block
 #   2. Add an overlay block at RAM 0x801A9800 mapped from file
-#      offset 0x142800 (the secondary section)
+#      offset 0x142800 (the secondary section) — now redundant
 #   3. Force-disassemble every 4-byte boundary in the overlay
 #   4. Re-export the disassembly text file
 #
 # Usage:
-#   ./research/tools/fix_battle_bin_disassembly.sh
+#   ./fft-ghidra/tools/fix_battle_bin_disassembly.sh
 #
 # Idempotent — safe to re-run. Existing BATTLE_SECONDARY overlays get
 # removed and re-created.
@@ -44,7 +53,7 @@ if [[ ! -x "$ANALYZE" ]]; then
   exit 1
 fi
 
-SCRIPT_DIR="$REPO_ROOT/research/tools"
+SCRIPT_DIR="$REPO_ROOT/fft-ghidra/tools"
 
 echo "=== fix_battle_bin: step 1 — force-disassemble primary block ranges ==="
 echo -e "y\ny" | timeout 600 "$ANALYZE" -H "$GHIDRA_PROJ_DIR" "$GHIDRA_PROJ_NAME" \

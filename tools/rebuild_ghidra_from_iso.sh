@@ -33,7 +33,7 @@ REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null)" || {
   echo "ERROR: not inside a git repo"; exit 1
 }
 cd "$REPO_ROOT"
-TOOLS_DIR="$REPO_ROOT/research/tools"
+TOOLS_DIR="$REPO_ROOT/fft-ghidra/tools"
 
 LISTING_ONLY=""
 if [[ "${1:-}" == "--listing-only" ]]; then
@@ -57,5 +57,12 @@ echo "=== STEP 4/4: export_ghidra_text.sh $LISTING_ONLY ==="
 
 echo ""
 echo "=== rebuild_ghidra_from_iso: done ==="
-echo "Disassembly: $REPO_ROOT/project-assets/fft-rom/battle_disassembly.txt"
-echo "Decompilation: $REPO_ROOT/project-assets/fft-rom/battle_decompilation.c"
+echo "Disassembly:"
+echo "  $REPO_ROOT/project-assets/fft-rom/scus_disassembly.txt"
+echo "  $REPO_ROOT/project-assets/fft-rom/battle_disassembly.txt"
+echo "Decompilation:"
+echo "  $REPO_ROOT/project-assets/fft-rom/scus_decompilation.c"
+echo "  $REPO_ROOT/project-assets/fft-rom/battle_decompilation.c"
+echo ""
+echo "Verify both dumps are present + complete:"
+echo "  python3 $REPO_ROOT/fft-ghidra/tests/test_exports_present.py"

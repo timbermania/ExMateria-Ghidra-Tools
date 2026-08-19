@@ -86,8 +86,34 @@ if [[ -f "$FFT_OUT_DIR/battle_bin_disassembly.txt.orig" ]]; then
   python3 "$TOOLS_DIR/annotate_legacy_disassembly.py" 2>&1 | tee -a "$LOG"
 fi
 
+# --- Verify every requested program actually produced its dump. This turns a
+# silently-partial export (e.g. SCUS left stale because someone ran a
+# BATTLE.BIN-only listing) into a hard, non-zero failure instead of a
+# success that quietly dropped a program. ---
+export_missing=0
+for prog in "${PROGRAMS[@]}"; do
+  stem="$(prog_to_stem "$prog")"
+  dis="$FFT_OUT_DIR/${stem}_disassembly.txt"
+  dis_sz="$(stat -c%s "$dis" 2>/dev/null || echo 0)"
+  if [[ "$dis_sz" -lt 100000 ]]; then
+    echo "ERROR: $prog -> ${stem}_disassembly.txt missing or too small (${dis_sz} bytes)" >&2
+    export_missing=1
+  fi
+  if [[ "$LISTING_ONLY" -eq 0 ]]; then
+    dec="$FFT_OUT_DIR/${stem}_decompilation.c"
+    if [[ ! -s "$dec" ]]; then
+      echo "ERROR: $prog -> ${stem}_decompilation.c missing" >&2
+      export_missing=1
+    fi
+  fi
+done
+
 echo
 echo "=== summary ==="
 ls -la "$FFT_OUT_DIR"/*_disassembly.txt 2>/dev/null || true
 ls -la "$FFT_OUT_DIR"/*_decompilation.c 2>/dev/null || true
 echo "Full log: $LOG"
+if [[ "$export_missing" -ne 0 ]]; then
+  echo "ERROR: one or more requested programs did not export — see above." >&2
+  exit 1
+fi

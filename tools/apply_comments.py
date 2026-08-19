@@ -29,14 +29,24 @@
 # Usage (GUI): Window -> Script Manager -> run apply_comments.py and pass
 # the JSONL path when prompted (via askFile).
 
+import hashlib
 import json
 import os
 
 from ghidra.program.model.listing import CodeUnit
 
-MARKER = "[fft-comments]"
+# Our marker carries a content fingerprint: "[fft-comments h=<hash>]". The hash
+# is computed from the SOURCE text, so idempotency compares the recorded marker
+# (which round-trips as plain ASCII) rather than the comment body (which Ghidra
+# may normalize on store) -- robust + self-healing on edits.
+MARKER_PREFIX = "[fft-comments"
+MARKER_BARE = "[fft-comments]"            # legacy pre-hash marker (still recognized)
 LEGACY_MARKERS = ("[effect-sound-parity v2]",)
-ALL_MARKERS = (MARKER,) + LEGACY_MARKERS
+
+
+def content_marker(body):
+    h = hashlib.md5(body.encode("utf-8")).hexdigest()[:10]
+    return "%s h=%s]" % (MARKER_PREFIX, h)
 
 KIND_CONST = {
     "PRE":        CodeUnit.PRE_COMMENT,
@@ -88,7 +98,7 @@ def get_existing(a, const):
 
 def set_new(a, const, body):
     cu, _ = get_existing(a, const)
-    text = MARKER + "\n" + body
+    text = content_marker(body) + "\n" + body
     if cu is not None:
         cu.setComment(const, text)
     else:
@@ -126,12 +136,21 @@ try:
         const = KIND_CONST[kind]
         a = parse_addr(pc)
         _, existing = get_existing(a, const)
-        if any(m in existing for m in ALL_MARKERS):
+        first_line = existing.split("\n", 1)[0] if existing else ""
+        # Idempotent: skip when our fingerprint already matches the source text.
+        if first_line == content_marker(text):
             print("  %s  %-5s  SKIP (marked)" % (pc, kind))
             n_skipped_marked += 1
             continue
+        is_ours = first_line.startswith(MARKER_PREFIX)
+        # Preserve foreign legacy-tool annotations (not managed by this script).
+        if not is_ours and any(m in existing for m in LEGACY_MARKERS):
+            print("  %s  %-5s  SKIP (legacy)" % (pc, kind))
+            n_skipped_marked += 1
+            continue
+        action = "updated" if is_ours else "applied"
         set_new(a, const, text)
-        print("  %s  %-5s  applied" % (pc, kind))
+        print("  %s  %-5s  %s" % (pc, kind, action))
         n_applied += 1
 finally:
     f.close()

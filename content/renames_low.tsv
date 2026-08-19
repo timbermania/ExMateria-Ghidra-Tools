@@ -18,3 +18,51 @@
 # behaviorally validated it (decomp confirmation, parity match against a
 # reimplementation, wiki citation), move the row to renames_high.tsv and
 # rerun apply_all_renames.sh.
+
+# --- HUD number font (FRAME.BIN digits) --- supporting cast; disasm-reported, not yet independently cross-checked.
+0x8014bae4	BATTLE	FN	hud_font_blit	Hyp: software blitter the digit routines feed a glyph descriptor to (no GPU primitive). [disasm only]
+0x8013eff4	BATTLE	FN	set_hud_font_src_ptr	Hyp: sets hud_font_src_ptr (0x80173f5c) = &hud_digit_font_4bpp (0x8014d5d4). [disasm only]
+0x8014ab58	BATTLE	FN	draw_number_xlarge_font	Hyp: a THIRD/large number font routine (U = digit*0x23, pitch 35) off a different bitmap; damage/large counters, NOT the vitals. [disasm only]
+0x80169770	BATTLE	GL	hud_big_glyph_descriptor	Hyp: big-digit blit descriptor written by draw_number_big_font (+0x0 U, +0x2 V, +0x4 W=8, +0x6 H=0x10, +0x8 stride=0x100). [disasm only]
+0x80169780	BATTLE	GL	hud_small_glyph_descriptor	Hyp: small-digit blit descriptor written by draw_number_small_font (+0x2 V=0x10/16, +0x4 W=6, +0x6 H=0xa/10, +0x8 stride=0x100). [disasm only]
+0x80173f5c	BATTLE	GL	hud_font_src_ptr	Hyp: pointer to hud_digit_font_4bpp (0x8014d5d4); set by set_hud_font_src_ptr. [disasm only]
+
+# --- Scenario / dialogue state globals (verified live 2026-06-20) ---
+0x8004eaf4	SCUS	GL	g_file_load_state_ctx	File-load state machine context struct (offsets: +0x04 state, +0x10 sector_count, +0x1C filename, +0x20 RAM dest). Verified live. [MD:SCENARIO_LOADING.md]
+0x80031b8c	SCUS	GL	g_cdrom_streaming_lba	CDROM streaming start LBA — written by cdrom_streaming_setup, copied to 0x80031ba0 by cdrom_streaming_start. [MD:SCENARIO_LOADING.md]
+0x80031b90	SCUS	GL	g_cdrom_streaming_dest_seed	CDROM streaming dest buffer seed (current_dest_ptr starts here). [MD:SCENARIO_LOADING.md]
+0x80031b94	SCUS	GL	g_cdrom_streaming_dest_ptr	CDROM streaming CURRENT dest buffer (advances per sector). [MD:SCENARIO_LOADING.md]
+0x80031b98	SCUS	GL	g_cdrom_streaming_mode_flags	CDROM streaming mode flags from cdrom_streaming_setup (controls sector size selection). [MD:SCENARIO_LOADING.md]
+0x80031b9c	SCUS	GL	g_cdrom_streaming_block_size	CDROM streaming block size in 32-bit words (0x200/0x246/0x249 by mode). [MD:SCENARIO_LOADING.md]
+0x80031ba0	SCUS	GL	g_cdrom_streaming_remaining	CDROM streaming remaining-block counter; decremented per sector callback. [MD:SCENARIO_LOADING.md]
+0x80031bac	SCUS	GL	g_cdrom_streaming_expected_lba	CDROM streaming expected-next-sector LBA. [MD:SCENARIO_LOADING.md]
+0x80173ca8	BATTLE	GL	g_attack_out_loader_fptr	Function pointer slot loaded by attack_out_loader_thunk; BATTLE_open_ATTACK_OUT_deployment stores SCUS::file_load_wrapper (0x80044954) here at 0x8013D384-88. [MD:SCENARIO_LOADING.md]
+0x8014cf5c	BATTLE	GL	g_attack_out_thunk_continuation	Continuation address loaded into ra by attack_out_loader_thunk at 0x8014CF48 before the final jr ra. [MD:SCENARIO_LOADING.md]
+0x80165fda	BATTLE	GL	g_deploy_phase_state	Hyp: deployment phase state halfword tested at 0x8013D350. Live values seen: 0 (post-load idle), 1 (post-Enter). Write BPs silently miss writes to this address. [MD:SCENARIO_LOADING.md]
+0x80166080	BATTLE	GL	g_dialogue_advance_action	Dialogue-advance action code written by event_dialogue_tick at 0x8012FC38: 1/2/8 depending on input bits. Read BP silently misses reads. [MD:SCENARIO_LOADING.md]
+0x80166044	BATTLE	GL	g_deploy_open_flag	Cleared to 0 at BATTLE_open_ATTACK_OUT_deployment entry (0x8013D330). [MD:SCENARIO_LOADING.md]
+
+# Subgroup: camera arc — static-only (dynamic leg indirect/missing; promote on probe)
+0x8008b6e4	BATTLE	FN	smooth_track_camera_target	Hyp: per-frame smooth-tracking interpolator that maintains camera_tracked_target (0x800a77b0) while its counter (0x80096168) > 0; accumulators at 0x80098a44/48/4c (4.12 fp), velocity feed 0x800b72f4/f8/fc. Static decode only — no direct probe fired on this function (referenced by F20 only as the target maintainer; battle_camera_system.txt section 9). [SD] [MD:camera_framing_pivot_decode.md]
+0x80183fb4	BATTLE	FN	tile_height_lookup	Hyp: terrain-height byte lookup used by tile_to_world (FUN_801aab90) for its Y = -(height*12) term. Role inferred from the call pattern; not directly probed (F12 only confirms it is unreachable during the scenario swoop, which never calls tile_to_world). [SD] [MD:camera_framing_pivot_decode.md]
+
+# Subgroup: Sprite Move / event-text — static-strong, dynamic leg soft (promote on direct probe)
+0x80146ee4	BATTLE	FN	sprite_move_op3b_handler	Hyp: opcode 0x3B (Sprite Move) wrapper — installs sprite_move_lerp as the per-frame task; registered via the dispatch chain at LAB_80144fa0. Dynamic leg indirect (dispatch traced live + opcode bit-exact in Godot, but no BP on this exact entry). [SD] [MD:SPRITE_MOVE_INVESTIGATION.md]
+0x80146f20	BATTLE	FN	sprite_move_op6e_handler	Hyp: opcode 0x6E (Sprite Move Beta / Speed variant) wrapper, sibling of sprite_move_op3b_handler. Static dispatch-chain decode only (no direct BP). [SD] [MD:SPRITE_MOVE_INVESTIGATION.md]
+0x80146f5c	BATTLE	FN	wait_sprite_move_op6f_handler	Hyp: opcode 0x6F (Wait Sprite Move) handler — polls active task slots matching slot-active & kind 0xb & unit-id. Full static math decode; no live probe fired. [SD] [MD:SPRITE_MOVE_INVESTIGATION.md]
+0x8014c958	BATTLE	FN	event_fiber_mark_complete	Hyp: clears slot+0x48 (task-active flag) at move completion, freeing the fiber. Static decode only (no direct BP). [SD] [MD:SPRITE_MOVE_INVESTIGATION.md]
+0x8013da00	BATTLE	FN	set_event_text_glyph_throttle	Hyp: sole writer of event_text_glyph_throttle (0x80165f88) at 0x8013da0c; 7 callers (default resume, alloc pause, state reset, opcode 0x76 Set Text Speed). Dynamic leg is caller inference, not a direct BP. [SD] [MD:display_message_overlay_decode.md]
+0x8014bd88	BATTLE	FN	event_text_glyph_decoder	Hyp: per-glyph font decoder — fills event_text_glyph_staging_buffer (0x8016db00); called from 0x8012fafc inside event_dialogue_tick. Dynamic leg indirect (caller-traced via 41 GsLoadImage hits, no BP on this entry). [SD] [MD:display_message_overlay_decode.md]
+
+# Subgroup: Use/Wait Field Object {55}/{57} — static-strong, dynamic leg soft/indirect (promote on a direct probe)
+0x8008e11c	BATTLE	FN	field_animation_start_wrapper	Hyp: thin wrapper that calls graphics_object_command_dispatcher(0x83, ID, arg2) to arm a field animation; reached from the consumer at 0x801434dc. Dynamic leg is proxy (the dispatcher fired, no BP on this wrapper). [SD] [MD:use_field_object_decode.md]
+0x8008e150	BATTLE	FN	field_animation_poll_wrapper	Hyp: thin wrapper that calls graphics_object_command_dispatcher(0x82, ID) to poll a field animation; reached from the consumer at 0x80143538. Dynamic leg is proxy (the dispatcher fired, no BP on this wrapper). [SD] [MD:use_field_object_decode.md]
+0x8014ca80	BATTLE	FN	event_fiber_yield	Cooperative fiber yield / context-switch primitive: saves the full callee context (s0-s8, sp, ra, gp, k0/k1) into the per-fiber block via the event coroutine table PTR_DAT_80165f98, then switches. Shared leaf used by the event opcode handlers (use/wait field object, EVTCHR-palette 0x7F) and looped by event_fiber_yield_n (0x8014c858). [CONFIRMED by disasm: 0x8014ca80 register/context save into PTR_DAT_80165f98; jal target of the counted loop in 0x8014c858] [MD:use_field_object_decode.md, TYPEWRITER_TEXT_CADENCE.md sec 7.0]
+0x8016606e	BATTLE	GL	threed_object_active_flag	Hyp: 3D-object completion barrier for {54}/{56}, parallel to field_object_active_flag (set/polled by the same consumer at 0x801434b4). Not exercised in the chapel scene, but registered so a later scenario's Wait 3D Object resolves; Godot _op_use_3d_object/_op_wait_3d_object handle it. Static mirror-pattern decode (6 static refs). [SD] [MD:use_field_object_decode.md]
+
+# --- Typewriter clock chain + Set Text Speed opcode -- static/doc-derived [MD:TYPEWRITER_TEXT_CADENCE.md sec 2.A,2.B] ---
+0x80093a98	BATTLE	FN	frame_sync	Game-loop frame sync run at the end of every iteration; calls kernel_vblank_wait (0x8001dba8) for N VBlanks. The engine's SINGLE VBlank-counting site -- the same dispatcher the effect time-scale/slow-mo system modulates (state==0x33/0x2d branch -> frame_pacing_timer/g_frame_pacing_value) and the cinematic/typewriter clock (else branch -> g_gameloop_vblank_wait_count 0x80045980). See the plate on this addr. [SD: EFFECT_TIMING_SYSTEM.md] [MD:TYPEWRITER_TEXT_CADENCE.md sec 2.A]
+0x8001dba8	SCUS	FN	kernel_vblank_wait	Hyp: kernel VBlank-wait primitive FUN_8001dba8(N) -- blocks until N VBlanks elapse; called by frame_sync (0x80093a98) each game-loop iteration. The engine's wall-clock pace source. [SD: EFFECT_TIMING_SYSTEM.md] [MD:TYPEWRITER_TEXT_CADENCE.md sec 2.A]
+0x80145250	BATTLE	FN	event_set_text_speed_handler	Hyp: event-script opcode 0x76 (Set Text Speed) handler; the ONLY script hook that writes event_text_glyph_throttle (via set_event_text_glyph_throttle 0x8013da00). No 0x76 runs before PC 42 in scenario 1, so the chapel prayer types at the default throttle 1. [SD; live corollary: throttle stayed 1 throughout the prayer] [MD:TYPEWRITER_TEXT_CADENCE.md sec 2.B,3]
+
+0x800960e4	BATTLE	GL	g_gameloop_pacing_state	Hyp: game-loop pacing state read by frame_sync (0x80093a98) to pick the VBlank-wait branch: 0x33/0x2d select the effect slow-mo path (complexity/frame_pacing), otherwise the cinematic path (g_gameloop_vblank_wait_count). [SD; live: =0x34 during the chapel prayer -> else branch] [MD:TYPEWRITER_TEXT_CADENCE.md sec 2.A,8]
