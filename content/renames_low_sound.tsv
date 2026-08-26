@@ -3,8 +3,8 @@
 # Same schema as renames_low.tsv. Loaded automatically by apply_renames_low.py
 # alongside the main LOW file (any sibling matching `renames_low*.tsv`).
 #
-# Confidence basis: cited from the smd-player subsystem's source comments.
-# The smd-player addon renders FFT music + SFX to parity, so the cited
+# Confidence basis: cited from the exmateria-sound subsystem's source comments.
+# The exmateria-sound addon renders FFT music + SFX to parity, so the cited
 # functions do roughly what the comments say — but no individual function
 # in this LOW file has been independently validated, so this stays LOW
 # until promoted.
@@ -14,24 +14,24 @@
 #
 # All entries are SCUS-tagged unless explicitly BATTLE.
 #
-# NOTE: The bulk of the smd-player opcode handlers (D7/D8/D9/DA/DB/C6/E6/
+# NOTE: The bulk of the exmateria-sound opcode handlers (D7/D8/D9/DA/DB/C6/E6/
 # C2-CA/D0-DC/E0-E8/EB-EF/F0-F7 etc.) have been promoted to HIGH — see
 # renames_high_sound.tsv. This file now holds only handlers and helpers
-# that smd-player references but doesn't yet have a stand-alone parity
+# that exmateria-sound references but doesn't yet have a stand-alone parity
 # claim for.
 
 # === A. Pitch / midi-conversion path ==========================================
 0x80017340	SCUS	FN	pitch_bias_add	Adds bias to midi*256+fine_tune before pitch lookup. sequencer.gd:707
 0x80017424	SCUS	FN	midi_to_spu_pitch_lookup	Converts midi*256+fine_tune to SPU pitch. sequencer.gd:708, native:152. See comments_scus.jsonl for full formula.
-0x80017744	SCUS	FN	pitch_accum_callback	Per-callback pitch accumulation (triangle-LFO callback target; smd-player chan+0x100 fn-ptr = pitch_accum_callback@idx3). sequencer.gd:608
+0x80017744	SCUS	FN	pitch_accum_callback	Per-callback pitch accumulation (triangle-LFO callback target; exmateria-sound chan+0x100 fn-ptr = pitch_accum_callback@idx3). sequencer.gd:608
 0x800177A8	SCUS	FN	pitch_accum_step	Inner accum += step routine. sequencer.gd:610
 
 # === B. Pitch-LFO internal helpers (called by 0xD8/0xD9 init paths) ===========
 0x80016BF8	SCUS	FN	pitch_lfo_step_calc	LFO step multiplier; called by 0xD8/0xD9 init. Returns step source from (rate², waveform_index). native:312
 0x80016DC0	SCUS	FN	pitch_lfo_period_reset	LFO countdown-period reload; tail-called by 0xD8 init. Also fired per-tick from the period-reset loop at LAB_800157AC. native:319
 
-# === C. Unknown / unprobed opcode handlers (not in smd-player table) ==========
-# Reachable from the jumptable but no smd-player handler has been validated
+# === C. Unknown / unprobed opcode handlers (not in exmateria-sound table) ==========
+# Reachable from the jumptable but no exmateria-sound handler has been validated
 # for these — likely unused by any bytecode actually observed, OR they need
 # a probe before promotion. Keep as Hyp_ until parity-confirmed.
 0x800158B8	SCUS	FN	Hyp_smd_op_8a	Opcode 0x8A handler. Jumptable LAB_800158B8 — body unprobed.

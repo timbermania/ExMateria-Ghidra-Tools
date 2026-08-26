@@ -5,7 +5,7 @@
 # included in the HIGH tier).
 #
 # Confidence basis: function role has been validated against a Godot
-# reimplementation (smd-player ExMateria-Sound addon) that produces matching
+# reimplementation (exmateria-sound ExMateria-Sound addon) that produces matching
 # audio output. The opcode → handler-address mapping is taken directly from
 # the SMD opcode jumptable at 0x80028B0C (read out of the SCUS disassembly);
 # each row's opcode-byte annotation is verified against that table.
@@ -27,7 +27,7 @@
 0x8001749C	SCUS	FN	lfo_handler_tick	Per-tick LFO state-machine entry.
 
 # === SMD opcode handlers (jumptable @ 0x80028B0C) =============================
-# Each entry validated against smd-player runtime/shared/opcodes/<name>.gd
+# Each entry validated against exmateria-sound runtime/shared/opcodes/<name>.gd
 # (parity-confirmed) AND cross-checked against the actual jumptable bytes.
 # Opcode bytes are AUTHORITATIVE — derived from PC = 0x80028B0C + (op-0x80)*4.
 # Unhandled opcodes route to the stub LAB_8001586c.
@@ -36,11 +36,11 @@
 0x80015874	SCUS	FN	smd_rest	Opcode 0x80 — rest for N ticks (note silence). KEY-OFF arm on transition. See MUSIC_ITER58: post-Rest lookahead drives end-of-note ADSR2-LOW=6 gate.
 0x8001589C	SCUS	FN	smd_fermata	Opcode 0x81 — extend previous note (fermata).
 0x800158F8	SCUS	FN	smd_end_bar	Opcode 0x90 — end-bar handler (barline marker).
-0x800159DC	SCUS	FN	smd_loop	Opcode 0x91 — loop from current position (save_loop_target in smd-player).
+0x800159DC	SCUS	FN	smd_loop	Opcode 0x91 — loop from current position (save_loop_target in exmateria-sound).
 0x800159F0	SCUS	FN	smd_octave	Opcode 0x94 — absolute octave set.
 0x80015A10	SCUS	FN	smd_raise_octave	Opcode 0x95 — octave +1.
 0x80015A28	SCUS	FN	smd_lower_octave	Opcode 0x96 — octave -1.
-0x80015A40	SCUS	FN	smd_op_97_time_signature	Opcode 0x97 — time-signature set. Stores numerator/denominator at chan+0x38/0x3e. Was Hyp_smd_op_loop_counter_setup in LOW; smd-player parity confirms time-signature role.
+0x80015A40	SCUS	FN	smd_op_97_time_signature	Opcode 0x97 — time-signature set. Stores numerator/denominator at chan+0x38/0x3e. Was Hyp_smd_op_loop_counter_setup in LOW; exmateria-sound parity confirms time-signature role.
 0x80015AB8	SCUS	FN	smd_repeat	Opcode 0x98 — repeat from current position N times.
 0x80015B00	SCUS	FN	smd_coda	Opcode 0x99 — coda (skip-to marker for D.C. al coda).
 0x80015B6C	SCUS	FN	smd_op_9a_repeat_break	Opcode 0x9A — repeat-break (early exit from active repeat loop).
